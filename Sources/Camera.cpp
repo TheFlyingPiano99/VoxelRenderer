@@ -47,7 +47,7 @@ void Camera::exportMatrix(Shader& shader)
 }
 
 
-void Camera::exportPostprocessData(Shader& shader)
+void Camera::exportData(Shader& shader)
 {
 	glUniform3f(glGetUniformLocation(shader.ID, "camera.eye"), Position.x, Position.y, Position.z);
 	glm::vec3 center = Position + Orientation;

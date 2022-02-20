@@ -2,18 +2,6 @@
 #include "GlobalInclude.h"
 #include "AssetManager.h"
 
-float rectangleVertices[] =
-{
-	//Coord	//texCoords
-	1.0f, -1.0f,  1.0f,  0.0f,
-   -1.0f, -1.0f,  0.0f,  0.0f,
-   -1.0f,  1.0f,  0.0f,  1.0f,
-
-	1.0f,  1.0f,  1.0f,  1.0f,
-	1.0f, -1.0f,  1.0f,  0.0f,
-   -1.0f,  1.0f,  0.0f,  1.0f
-};
-
 
 void PostprocessUnit::exportData()
 {
@@ -79,6 +67,17 @@ void PostprocessUnit::initShadowFBO()
 }
 
 void PostprocessUnit::init() {
+	float quadVertices[] =
+	{
+		//Coord	//texCoords
+		1.0f, -1.0f,  1.0f,  0.0f,
+	   -1.0f, -1.0f,  0.0f,  0.0f,
+	   -1.0f,  1.0f,  0.0f,  1.0f,
+
+		1.0f,  1.0f,  1.0f,  1.0f,
+		1.0f, -1.0f,  1.0f,  0.0f,
+	   -1.0f,  1.0f,  0.0f,  1.0f
+	};
 	shader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("postprocess.frag").c_str()
@@ -90,7 +89,7 @@ void PostprocessUnit::init() {
 	glGenBuffers(1, &rectVBO);
 	glBindVertexArray(rectVAO);
 	glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(rectangleVertices), &rectangleVertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(1);
@@ -125,7 +124,7 @@ void PostprocessUnit::renderToScreen(Camera& camera, Camera& lightCamera, Planet
 	shader->Activate();
 
 	exportData();
-	camera.exportPostprocessData(*shader);
+	camera.exportData(*shader);
 	lightCamera.exportPostprocessDataAsLightCamera(*shader);
 	planet.exportAtmosphere(*shader);
 	sun.exportData(*shader);

@@ -196,6 +196,8 @@
     <ClCompile Include="VAO.cpp" />
     <ClCompile Include="VBO.cpp" />
     <ClCompile Include="Texture3D.cpp" />
+    <ClCompile Include="VoxelData.cpp" />
+    <ClCompile Include="VoxelRenderUnit.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Animation.h" />
@@ -236,6 +238,8 @@
     <ClInclude Include="VBO.h" />
     <ClInclude Include="vectorOperations.h" />
     <ClInclude Include="Texture3D.h" />
+    <ClInclude Include="VoxelData.h" />
+    <ClInclude Include="VoxelRenderUnit.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Resources\Shaders\default.frag" />

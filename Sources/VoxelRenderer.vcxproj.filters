@@ -144,6 +144,12 @@
     <ClCompile Include="Animation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="VoxelRenderUnit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VoxelData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -258,6 +264,12 @@
       <Filter>Header Files\Model</Filter>
     </ClInclude>
     <ClInclude Include="Texture3D.h">
+      <Filter>Header Files\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="VoxelRenderUnit.h">
+      <Filter>Header Files\View</Filter>
+    </ClInclude>
+    <ClInclude Include="VoxelData.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
   </ItemGroup>

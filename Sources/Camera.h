@@ -17,7 +17,7 @@ class Camera
 public:
 	// Stores the main vectors of the camera
 	glm::vec3 Position;
-	glm::vec3 Orientation = glm::vec3(0.0f, 0.0f, -1.0f);
+	glm::vec3 Orientation = glm::vec3(0.0f, 0.0f, 1.0f);
 	glm::vec3 prefUp = glm::vec3(0.0f, 1.0f, 0.0f);
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);
 	glm::mat4 invCameraMatrix = glm::mat4(1.0f);
@@ -33,7 +33,7 @@ public:
 	int height;
 
 	// Adjust the speed of the camera and it's sensitivity when looking around
-	float speed = 0.05f;
+	float speed = 0.3f;
 	float sensitivity = 100.0f;
 
 	// Camera constructor to set up initial values
@@ -46,7 +46,7 @@ public:
 	// Exports the camera matrix to a shader
 	void exportMatrix(Shader& shader);
 
-	void exportPostprocessData(Shader& program);
+	void exportData(Shader& program);
 	void exportPostprocessDataAsLightCamera(Shader& program);
 
 	// Obsolete
