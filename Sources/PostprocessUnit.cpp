@@ -80,7 +80,7 @@ void PostprocessUnit::initShadowFBO()
 
 void PostprocessUnit::init() {
 	shader = new Shader(
-		AssetManager::getInstance()->getShaderFolderPath().append("postprocess.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("postprocess.frag").c_str()
 	);
 	shader->Activate();

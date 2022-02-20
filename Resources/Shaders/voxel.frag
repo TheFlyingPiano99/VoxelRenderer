@@ -3,11 +3,7 @@
 out vec4 FragColor;
 in vec2 texCoords;
 
-layout(binding=0) uniform sampler2D screenColorTexture;
-layout(binding=1) uniform sampler2D screenBrightColorTexture;
-layout(binding=2) uniform sampler2D screenDepthStencilTexture;
-layout(binding=3) uniform sampler2D shadowDepthTexture;
-
+layout(binding=0) uniform sampler3D voxels;
 
 uniform int windowWidth;
 uniform int windowHeight;

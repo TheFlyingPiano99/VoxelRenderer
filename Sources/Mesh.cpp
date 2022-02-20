@@ -1,6 +1,6 @@
 #include "Mesh.h"
 
-Mesh::Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture>& textures)
+Mesh::Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture2D>& textures)
 {
 	Mesh::vertices = vertices;
 	Mesh::indices = indices;
@@ -159,7 +159,7 @@ Mesh* Mesh::createSphere(float r, std::vector<glm::vec3> colors)
 		vertices.push_back(vert);
 	}
 
-	std::vector<Texture> tex;
+	std::vector<Texture2D> tex;
 
 	return new Mesh(vertices, indices, tex);
 }

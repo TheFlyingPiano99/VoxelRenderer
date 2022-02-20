@@ -7,7 +7,6 @@
 #include "Sun.h"
 
 
-
 class PostprocessUnit
 {
 	unsigned int colorFBO;

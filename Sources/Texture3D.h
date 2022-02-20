@@ -6,15 +6,14 @@
 
 #include"shaderClass.h"
 
-class Texture
+class Texture3D
 {
 public:
 	GLuint ID;
-	const char* type;
 	GLuint unit;
 	float shininess = 16.0f;	// Should be extracted to Material
 
-	Texture(const char* image, const char* texType, GLuint slot, GLenum format, GLenum pixelType);
+	Texture3D(const char* image, GLuint slot, GLenum format, GLenum pixelType);
 
 	// Assigns a texture unit to a texture
 	void texUnit(Shader& shader, const char* uniform, GLuint unit);

@@ -57,7 +57,7 @@
     <ClCompile Include="stb.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Texture.cpp">
+    <ClCompile Include="Texture2D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Camera.cpp">
@@ -135,10 +135,13 @@
     <ClCompile Include="Stars.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Animation.cpp">
-      <Filter>Resource Files\Shaders</Filter>
-    </ClCompile>
     <ClCompile Include="Moon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Texture3D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -242,7 +245,7 @@
     <ClInclude Include="TestObject.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
-    <ClInclude Include="Texture.h">
+    <ClInclude Include="Texture2D.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
     <ClInclude Include="VAO.h">
@@ -252,6 +255,9 @@
       <Filter>Header Files\View</Filter>
     </ClInclude>
     <ClInclude Include="vectorOperations.h">
+      <Filter>Header Files\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture3D.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
   </ItemGroup>
@@ -271,7 +277,10 @@
     <None Include="..\Resources\Shaders\postprocess.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="..\Resources\Shaders\postprocess.vert">
+    <None Include="..\Resources\Shaders\quad.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\Resources\Shaders\voxel.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
   </ItemGroup>

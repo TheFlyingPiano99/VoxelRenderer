@@ -6,27 +6,27 @@
 
 #include "GUI.h"
 
-#define PROJECT_NAME "AtmosphereSim"
+#define PROJECT_NAME "Voxel renderer"
 
 int initWindow(GLFWwindow*& window) {
 	// Initialize GLFW
 	glfwInit();
 
 	// Tell GLFW what version of OpenGL we are using 
-	// In this case we are using OpenGL 3.3
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	// In this case we are using OpenGL 4.2
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 	// Tell GLFW we are using the CORE profile
 	// So that means we only have the modern functions
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Create a GLFWwindow object of 800 by 800 pixels, naming it "YoutubeOpenGL"
-	window = glfwCreateWindow(windowWidth, windowHeight, "AtmosphereSim", NULL, NULL);
+	window = glfwCreateWindow(windowWidth, windowHeight, PROJECT_NAME, NULL, NULL);
 	// Error check if the window fails to create
 
 	if (window == NULL)
 	{
-		std::cout << "Failed to create GLFW window" << std::endl;
+		std::cout << "Failed to create GLFW window!" << std::endl;
 		glfwTerminate();
 		return -1;
 	}
@@ -58,7 +58,7 @@ int main()
 	double timeDiff;
 	double prevIterTime = 0.0f;
 	// Keeps track of the amount of frames in timeDiff
-	unsigned int counter = 0;
+	unsigned int frameCounter = 0;
 
 	const double dtLimit = 10.0;
 
@@ -70,19 +70,19 @@ int main()
 		// Updates counter and times
 		crntTime = glfwGetTime();
 		timeDiff = crntTime - prevTime;
-		counter++;
+		frameCounter++;
 
-		if (counter >= 500)
+		if (frameCounter >= 50)
 		{
 			// Creates new title
-			std::string FPS = std::to_string((1.0 / timeDiff) * counter);
-			std::string ms = std::to_string((timeDiff / counter) * 1000);
-			std::string newTitle = "AtmosphereSim   (" + FPS + " FPS / " + ms + "ms)";
+			std::string FPS = std::to_string((1.0 / timeDiff) * frameCounter);
+			std::string ms = std::to_string((timeDiff / frameCounter) * 1000.0);
+			std::string newTitle = std::string(PROJECT_NAME) + " (" + FPS + " FPS / " + ms + " ms)";
 			glfwSetWindowTitle(window, newTitle.c_str());
 
 			// Resets times and counter
 			prevTime = crntTime;
-			counter = 0;
+			frameCounter = 0;
 		}
 
 		double dt = 0.0;

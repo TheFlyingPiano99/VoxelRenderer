@@ -78,17 +78,17 @@ void Scene::initMeshesShadersObjects()
 
 
 	// Texture data
-	Texture textures[]
+	Texture2D textures[]
 	{
-		Texture((AssetManager::getInstance()->getTextureFolderPath().append("planks.png") ).c_str(), "diffuse", 0, GL_RGBA, GL_UNSIGNED_BYTE),
-		Texture((AssetManager::getInstance()->getTextureFolderPath().append("planksSpec.png")).c_str(), "specular", 1, GL_RED, GL_UNSIGNED_BYTE)
+		Texture2D((AssetManager::getInstance()->getTextureFolderPath().append("planks.png") ).c_str(), "diffuse", 0, GL_RGBA, GL_UNSIGNED_BYTE),
+		Texture2D((AssetManager::getInstance()->getTextureFolderPath().append("planksSpec.png")).c_str(), "specular", 1, GL_RED, GL_UNSIGNED_BYTE)
 	};
 
 	// Generates Shader object using shaders default.vert and default.frag
 	// Store mesh data in vectors for the mesh
 	std::vector <Vertex> verts(vertices, vertices + sizeof(vertices) / sizeof(Vertex));
 	std::vector <GLuint> ind(indices, indices + sizeof(indices) / sizeof(GLuint));
-	std::vector <Texture> tex(textures, textures + sizeof(textures) / sizeof(Texture));
+	std::vector <Texture2D> tex(textures, textures + sizeof(textures) / sizeof(Texture2D));
 
 	std::vector <Vertex> lightVerts(lightVertices, lightVertices + sizeof(lightVertices) / sizeof(Vertex));
 	std::vector <GLuint> lightInd(lightIndices, lightIndices + sizeof(lightIndices) / sizeof(GLuint));
