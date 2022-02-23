@@ -106,3 +106,35 @@ public:
 
 	void execute(Scene* scene, float dt) override;
 };
+
+class ShiftIntersectionPlanePos : public ControlAction {
+public:
+	ShiftIntersectionPlanePos() : ControlAction(GLFW_KEY_M, true) {
+	}
+
+	void execute(Scene* scene, float dt) override;
+};
+
+class ShiftIntersectionPlaneNeg : public ControlAction {
+public:
+	ShiftIntersectionPlaneNeg() : ControlAction(GLFW_KEY_N, true) {
+	}
+
+	void execute(Scene* scene, float dt) override;
+};
+
+class RotateIntersectionPlanePosY : public ControlAction {
+public:
+	RotateIntersectionPlanePosY() : ControlAction(GLFW_KEY_L, true) {
+	}
+
+	void execute(Scene* scene, float dt) override;
+};
+
+class RotateIntersectionPlaneNegY : public ControlAction {
+public:
+	RotateIntersectionPlaneNegY() : ControlAction(GLFW_KEY_K, true) {
+	}
+
+	void execute(Scene* scene, float dt) override;
+};

@@ -1,18 +1,36 @@
 #include "Texture3D.h"
+#include <iomanip>
 
-Texture3D::Texture3D(const char* image, GLuint slot, GLenum format, GLenum pixelType)
+Texture3D::Texture3D(const char* file, GLuint slot, GLenum format, GLenum pixelType)
 {
 	// Stores the width, height, and the number of color channels of the image
 	int widthImg, heightImg, depthImg, numColCh;
-	widthImg = 100;
-	heightImg = 100;
-	depthImg = 100;
+	widthImg = 256;
+	heightImg = 256;
+	depthImg = 99;
 	numColCh = 1;
 
+	unsigned char* bytes = new unsigned char[widthImg * heightImg * depthImg * numColCh];
+
 	// Flips the image so it appears right side up
-	stbi_set_flip_vertically_on_load(true);
+	stbi_set_flip_vertically_on_load(false);
 	// Reads the image from a file and stores it in bytes
-	unsigned char* bytes = new unsigned char[100 * 100 * 100 * numColCh];
+	for (int z = 0; z < depthImg; z++) {
+		std::stringstream ss;
+		ss << file << std::setw(3) << std::setfill('0') << z + 1 << ".tif";
+		std::string str = ss.str();
+		FILE* file;
+		errno_t err;
+		//unsigned char* imageBytes = stbi_load(str.c_str(), &widthImg, &heightImg, &numColCh, 0);
+		if (err = fopen_s(&file, str.c_str(), "rb") == 0) {
+			int bytesCount = fread(bytes + z * widthImg * heightImg * numColCh, sizeof(char), widthImg * heightImg * numColCh, file);
+			fclose(file);
+		}
+	}
+
+	/*
+	// Reads the image from a file and stores it in bytes
+	unsigned char* bytes = new unsigned char[widthImg * heightImg * depthImg * numColCh];
 	for (int x = 0; x < widthImg; x++) {
 		for (int y = 0; y < heightImg; y++) {
 			for (int z = 0; z < depthImg; z++) {
@@ -28,6 +46,7 @@ Texture3D::Texture3D(const char* image, GLuint slot, GLenum format, GLenum pixel
 			}
 		}
 	}
+	*/
 
 	// Generates an OpenGL texture object
 	glGenTextures(1, &ID);
@@ -50,12 +69,11 @@ Texture3D::Texture3D(const char* image, GLuint slot, GLenum format, GLenum pixel
 
 	// Assigns the image to the OpenGL Texture object
 	//TODO
-	glTexImage3D(GL_TEXTURE_3D, 0, format, 100, 100, 100, 0, format, pixelType, bytes);
+	glTexImage3D(GL_TEXTURE_3D, 0, format, widthImg, heightImg, depthImg, 0, format, pixelType, bytes);
 	// Generates MipMaps
 	glGenerateMipmap(GL_TEXTURE_3D);
 
 	// Deletes the image data as it is already in the OpenGL Texture object
-	//stbi_image_free(bytes);
 	delete[] bytes;
 
 	// Unbinds the OpenGL Texture object so that it can't accidentally be modified

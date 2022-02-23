@@ -60,5 +60,7 @@ public:
 	PostprocessUnit* getPostprocessUnit();
 
 	Camera* getCamera();
+
+	VoxelData* getVoxelData();
 };
 

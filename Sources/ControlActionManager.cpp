@@ -31,7 +31,10 @@ void ControlActionManager::registerDefault()
 	registerAction(new FastForward());
 	registerAction(new Rewind());
 	registerAction(new TogglePause());
-	registerAction(new ToggleGravitation());
+	registerAction(new ShiftIntersectionPlanePos());
+	registerAction(new ShiftIntersectionPlaneNeg());
+	registerAction(new RotateIntersectionPlanePosY());
+	registerAction(new RotateIntersectionPlaneNegY());
 }
 
 void ControlActionManager::registerAction(ControlAction* toRegister)

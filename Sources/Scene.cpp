@@ -74,7 +74,7 @@ void Scene::initMeshesShadersObjects()
 		AssetManager::getInstance()->getShaderFolderPath().append("voxel.frag").c_str()
 	);
 	shaders.push_back(voxelShader);
-	voxels = new VoxelData(voxelShader, "test!");
+	voxels = new VoxelData(voxelShader, "D:/VisualCpp/VoxelRenderer/Resources/Volumetric/mrbrain-8bit/");
 }
 
 
@@ -146,7 +146,7 @@ void Scene::control(float dt)
 void Scene::animate(float dt)
 {
 	if (!pause) {
-		//TODO
+		voxels->animate(dt);
 	}
 }
 
@@ -174,4 +174,9 @@ PostprocessUnit* Scene::getPostprocessUnit()
 
 Camera* Scene::getCamera() {
     return camera;
+}
+
+VoxelData* Scene::getVoxelData()
+{
+	return voxels;
 }

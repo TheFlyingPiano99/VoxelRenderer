@@ -153,6 +153,9 @@
     <ClCompile Include="Texture1D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Plane.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -276,6 +279,9 @@
       <Filter>Header Files\Model</Filter>
     </ClInclude>
     <ClInclude Include="Texture1D.h">
+      <Filter>Header Files\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="Plane.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
   </ItemGroup>
