@@ -20,10 +20,10 @@ void Sun::exportData(Shader& shader) {
 void Sun::updateLightCamera(Planet& planet)
 {
 	if (lightCamera == nullptr) {
-		lightCamera = new Camera(1024, 1024, position);
+		lightCamera = new Camera(1024, 1024, position, glm::normalize(planet.getPosition()  - position));
 	}
 	lightCamera->setPosition(position);
-	lightCamera->Orientation = glm::normalize(planet.getPosition() - position);
+	lightCamera->lookDir = glm::normalize(planet.getPosition() - position);
 	lightCamera->updateMatrix();
 }
 

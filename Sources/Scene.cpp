@@ -64,7 +64,7 @@ Scene* Scene::instance = nullptr;
 
 void Scene::initCamera()
 {
-	camera = new Camera(windowWidth, windowHeight, glm::vec3(0.0f, 0.0f, 0.0f));
+	camera = new Camera(windowWidth, windowHeight, glm::vec3(0.0f, 0.0f, 0.0f), glm::normalize(glm::vec3(1, 1, 1)));
 }
 
 void Scene::initMeshesShadersObjects()

@@ -358,28 +358,26 @@ vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRayDirection) {
 	cubeIntersection(vec3(0.0), resolution, cameraRayStart, cameraRayDirection, tNear, tFar);
 	vec3 color = vec3(0.0);
 	if (0.0 < tFar) {
-		if (tFar - tNear < 0.001) {
+		if (tFar - tNear < 0.001) {	// Too small distance between two intersection points
 			tNear = 0.0;
 		}
 		float distanceTravelled = tNear;
 		vec3 currentPos = cameraRayStart + tNear * cameraRayDirection;
 		ivec3 currentVoxel = ivec3(currentPos);
-		float delta;
 		vec3 scalar = 1.0 / cameraRayDirection;
 		int prevCoord = -1;
 		vec3 stepSizes = vec3(-1);
 		int iterations = 0;
-		float attenuation = 0.0;
+
+		float delta;
+		float opacity = 1.0;
 		while (distanceTravelled < tFar && iterations < 1000) {
 			delta = calculateStep(prevCoord, stepSizes, scalar, currentPos, generalDirection, currentVoxel);
 			if (currentPos.x >= 0 && currentPos.y >= 0 && currentPos.z >= 0.0
-			&& currentPos.x < resolution.x && currentPos.y < resolution.y && currentPos.z < resolution.z) {
+			&& currentPos.x < resolution.x && currentPos.y < resolution.y && currentPos.z < resolution.z) {	//Inside bounding cube
 				float intensity = texture(voxels, currentPos / resolution).x;
-				attenuation += texture(colorAttenuationTransfer, intensity).a;
-				if (attenuation > 1.0) {
-					break;
-				}
-				color += delta * texture(colorAttenuationTransfer, intensity).rgb * (1 - attenuation);
+				color += delta * texture(colorAttenuationTransfer, intensity).rgb * opacity;	// Sum color
+				opacity *= (1 - texture(colorAttenuationTransfer, intensity).a);	// Product opacity
 			}
 			currentPos += cameraRayDirection * delta;
 			distanceTravelled += delta;
