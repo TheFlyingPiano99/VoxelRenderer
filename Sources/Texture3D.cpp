@@ -7,11 +7,12 @@ Texture3D::Texture3D(const char* image, GLuint slot, GLenum format, GLenum pixel
 	widthImg = 100;
 	heightImg = 100;
 	depthImg = 100;
-	numColCh = 4;
+	numColCh = 1;
+
 	// Flips the image so it appears right side up
 	stbi_set_flip_vertically_on_load(true);
 	// Reads the image from a file and stores it in bytes
-	unsigned char* bytes = new unsigned char[100 * 100 * 100 * 4];
+	unsigned char* bytes = new unsigned char[100 * 100 * 100 * numColCh];
 	for (int x = 0; x < widthImg; x++) {
 		for (int y = 0; y < heightImg; y++) {
 			for (int z = 0; z < depthImg; z++) {
@@ -19,16 +20,10 @@ Texture3D::Texture3D(const char* image, GLuint slot, GLenum format, GLenum pixel
 				float r = (x - 50) * (x - 50) + (y - 50) * (y - 50) + (z - 50) * (z - 50);
 				float r2 = (x - 50) * (x - 50) + (y - 50) * (y - 50);
 				if (r < 50 * 50 && r2 < 25 * 25) {	// F(x)
-					bytes[coord * numColCh] = x;
-					bytes[coord * numColCh + 1] = y;
-					bytes[coord * numColCh + 2] = z;
-					bytes[coord * numColCh + 3] = 1;
+					bytes[coord * numColCh] = 25 * 25 - r2 / 10.0;
 				}
 				else {
 					bytes[coord * numColCh] = 0;
-					bytes[coord * numColCh + 1] = 0;
-					bytes[coord * numColCh + 2] = 0;
-					bytes[coord * numColCh + 3] = 1;
 				}
 			}
 		}
@@ -55,7 +50,7 @@ Texture3D::Texture3D(const char* image, GLuint slot, GLenum format, GLenum pixel
 
 	// Assigns the image to the OpenGL Texture object
 	//TODO
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, 100, 100, 100, 0, format, pixelType, bytes);
+	glTexImage3D(GL_TEXTURE_3D, 0, format, 100, 100, 100, 0, format, pixelType, bytes);
 	// Generates MipMaps
 	glGenerateMipmap(GL_TEXTURE_3D);
 

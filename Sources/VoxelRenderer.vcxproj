@@ -192,6 +192,7 @@
     <ClCompile Include="stb.cpp" />
     <ClCompile Include="Sun.cpp" />
     <ClCompile Include="TestObject.cpp" />
+    <ClCompile Include="Texture1D.cpp" />
     <ClCompile Include="Texture2D.cpp" />
     <ClCompile Include="VAO.cpp" />
     <ClCompile Include="VBO.cpp" />
@@ -233,6 +234,7 @@
     <ClInclude Include="Stars.h" />
     <ClInclude Include="Sun.h" />
     <ClInclude Include="TestObject.h" />
+    <ClInclude Include="Texture1D.h" />
     <ClInclude Include="Texture2D.h" />
     <ClInclude Include="VAO.h" />
     <ClInclude Include="VBO.h" />

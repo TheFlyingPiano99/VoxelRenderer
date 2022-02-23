@@ -4,9 +4,13 @@ out vec4 FragColor;
 in vec2 texCoords;
 
 layout(binding=0) uniform sampler3D voxels;
+layout(binding=1) uniform sampler1D colorAttenuationTransfer;
 
 uniform int windowWidth;
 uniform int windowHeight;
+
+uniform float maxIntensity;
+uniform float maxAttenuation;
 
 float widthOffset = 1.0 / 2000.0f;
 float heightOffset = 1.0 / 2000.0f;
@@ -202,43 +206,196 @@ vec3 interpolateVoxels(sampler3D voxelsToInterpolate, vec3 currentPos, vec3 reso
 	return sum;
 }
 
-vec3 calculateIntensity(vec3 cameraRayStart, vec3 cameraRayDirection) {
-	vec3 intensity = vec3(0.0);
-	vec3 currentPos = cameraRayStart;
+float rectangleIntersection(vec3 p, vec3 sideA, vec3 sideB, vec3 rayStart, vec3 rayDir) {
+	vec3 norm = normalize(cross(sideA, sideB));
+	float t = dot(norm, p - rayStart) / dot(norm, rayDir);
+	if (0.0 > t) {
+		return -1.0;
+	}
+	vec3 intersection = rayStart + t * rayDir;
+	if (dot(sideA, intersection - p) > 0.0
+	&& dot(sideB, intersection - p) > 0.0
+	&& dot(-sideA, intersection - (p + sideA + sideB)) > 0.0
+	&& dot(-sideB, intersection - (p + sideA + sideB)) > 0.0) {
+		return t;
+	}
+	else {
+		return -1.0;
+	}
+}
+
+void updateT(float t, out float tNear, out float tFar) {
+	if (0.0 < t) {
+		if (t < tNear) {
+			tNear = t;
+		}
+		if (t > tFar) {
+			tFar = t;
+		}
+	}
+}
+
+void cubeIntersection(vec3 p, vec3 dimensions, vec3 rayStart, vec3 rayDir, out float tNear, out float tFar) {
+	tNear = -1.0;
+	tFar = -1.0;
+	float t = rectangleIntersection(p, vec3(1, 0, 0) * dimensions, vec3(0, 1, 0) * dimensions, rayStart, rayDir);
+	if (0.0 < t) {
+		tNear = t;
+		tFar = t;
+	}
+	t = rectangleIntersection(p, vec3(0, 1, 0) * dimensions, vec3(0, 0, 1) * dimensions, rayStart, rayDir);
+	if (0.0 < t) {
+		if (t < tNear) {
+			tNear = t;
+		}
+		if (t > tFar) {
+			tFar = t;
+		}
+	}	t = rectangleIntersection(p, vec3(0, 0, 1) * dimensions, vec3(1, 0, 0) * dimensions, rayStart, rayDir);
+	if (0.0 < t) {
+		if (t < tNear) {
+			tNear = t;
+		}
+		if (t > tFar) {
+			tFar = t;
+		}
+	}	t = rectangleIntersection(dimensions, vec3(0, 0, -1) * dimensions, vec3(0, -1, 0) * dimensions, rayStart, rayDir);
+	if (0.0 < t) {
+		if (t < tNear) {
+			tNear = t;
+		}
+		if (t > tFar) {
+			tFar = t;
+		}
+	}	t = rectangleIntersection(dimensions, vec3(-1, 0, 0) * dimensions, vec3(0, 0, -1) * dimensions, rayStart, rayDir);
+	if (0.0 < t) {
+		if (t < tNear) {
+			tNear = t;
+		}
+		if (t > tFar) {
+			tFar = t;
+		}
+	}	t = rectangleIntersection(dimensions, vec3(-1, 0, 0) * dimensions, vec3(0, -1, 0) * dimensions, rayStart, rayDir);
+	if (0.0 < t) {
+		if (t < tNear) {
+			tNear = t;
+		}
+		if (t > tFar) {
+			tFar = t;
+		}
+	}}
+
+float calculateStep(out int prevCoord, out vec3 stepSizes, vec3 scalars, vec3 currentPos, ivec3 generalDir, out ivec3 voxel) {
+	vec3 inVoxelOffset = currentPos - vec3(voxel);
+	vec3 delta = vec3(0.0);
+	if (prevCoord == -1) {	//First time
+		if (generalDir.x > 0) {
+			delta.x = 1 - inVoxelOffset.x;
+			stepSizes.x = scalars.x * delta.x;
+		}
+		else if (generalDir.x < 0) {
+			delta.x = inVoxelOffset.x;
+			stepSizes.x = scalars.x * delta.x;
+		}
+
+		if (generalDir.y > 0) {
+			delta.y = 1 - inVoxelOffset.y;
+			stepSizes.y = scalars.y * delta.y;
+		}
+		else if (generalDir.y < 0) {
+			delta.y = inVoxelOffset.y;
+			stepSizes.y = scalars.y * delta.y;
+		}
+
+		if (generalDir.z > 0) {
+			delta.z = 1 - inVoxelOffset.z;
+			stepSizes.z = scalars.z * delta.z;
+		}
+		else if (generalDir.z < 0) {
+			delta.z = inVoxelOffset.z;
+			stepSizes.z = scalars.z * delta.z;
+		}
+	}
+	else {
+		if (generalDir[prevCoord] > 0) {
+			delta[prevCoord] = 1 - inVoxelOffset[prevCoord];
+		}
+		else if (generalDir[prevCoord] < 0) {
+			delta[prevCoord] = inVoxelOffset[prevCoord];
+		}
+		stepSizes[prevCoord] = scalars[prevCoord] * delta[prevCoord];
+	}
+	//Find minimal step axis:
+	float minimalStep = stepSizes[0];
+	int minIdx = 0;
+	for (int i = 1; i < 3; i++) {
+		if (minimalStep > stepSizes[i]) {
+			minimalStep = stepSizes[i];
+			minIdx = i;
+		}
+	}
+	prevCoord = minIdx;
+	voxel[prevCoord] += generalDir[prevCoord];
+	//return stepSizes[prevCoord];
+	return 1.0;
+}
+
+vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRayDirection) {
 	ivec3 generalDirection;
 	if (0.0 < cameraRayDirection.x) {generalDirection.x = 1;}
 	else if (0.0 > cameraRayDirection.x) {generalDirection.x = -1;}
-	else {generalDirection.x = 0;}
 
 	if (0.0 < cameraRayDirection.y) {generalDirection.y = 1;}
 	else if (0.0 > cameraRayDirection.y) {generalDirection.y = -1;}
-	else {generalDirection.y = 0;}
 
 	if (0.0 < cameraRayDirection.z) {generalDirection.z = 1;}
 	else if (0.0 > cameraRayDirection.z) {generalDirection.z = -1;}
-	else {generalDirection.z = 0;}
 	vec3 resolution = vec3(100, 100, 100);
 
-	for (int i = 0; i < 1000; i++) {
-		currentPos += cameraRayDirection * 1.0;
-		if (currentPos.x > 0 && currentPos.x < resolution.x 
-		&& currentPos.y > 0 && currentPos.y < resolution.y
-		&& currentPos.z > 0 && currentPos.z < resolution.z) {
-			intensity += interpolateVoxels(voxels, currentPos, resolution);
+
+	//Calculate bounding cube intersection:
+	float tNear, tFar;
+	cubeIntersection(vec3(0.0), resolution, cameraRayStart, cameraRayDirection, tNear, tFar);
+	vec3 color = vec3(0.0);
+	if (0.0 < tFar) {
+		if (tFar - tNear < 0.001) {
+			tNear = 0.0;
+		}
+		float distanceTravelled = tNear;
+		vec3 currentPos = cameraRayStart + tNear * cameraRayDirection;
+		ivec3 currentVoxel = ivec3(currentPos);
+		float delta;
+		vec3 scalar = 1.0 / cameraRayDirection;
+		int prevCoord = -1;
+		vec3 stepSizes = vec3(-1);
+		int iterations = 0;
+		float attenuation = 0.0;
+		while (distanceTravelled < tFar && iterations < 1000) {
+			delta = calculateStep(prevCoord, stepSizes, scalar, currentPos, generalDirection, currentVoxel);
+			if (currentPos.x >= 0 && currentPos.y >= 0 && currentPos.z >= 0.0
+			&& currentPos.x < resolution.x && currentPos.y < resolution.y && currentPos.z < resolution.z) {
+				float intensity = texture(voxels, currentPos / resolution).x;
+				attenuation += texture(colorAttenuationTransfer, intensity).a;
+				if (attenuation > 1.0) {
+					break;
+				}
+				color += delta * texture(colorAttenuationTransfer, intensity).rgb * (1 - attenuation);
+			}
+			currentPos += cameraRayDirection * delta;
+			distanceTravelled += delta;
+			iterations++;
 		}
 	}
-	//if (0.0 < length(intensity)) {
-	//	intensity = normalize(intensity);
-	//}
-	return intensity * 0.01;
+	else {
+		return vec3(0, 0.1, 0.1);	// Background outside bounding cube
+	}
+	return color;
 }
+
 
 void main() {
 	vec3 cameraRayStart;
 	vec3 cameraRayDirection;
 	calculateRayStart(texCoords * 2 - 1, cameraRayStart, cameraRayDirection);
-	vec3 intensity = calculateIntensity(cameraRayStart, cameraRayDirection);
-
-	FragColor = vec4(intensity, 1.0f);
-
+	FragColor = vec4(calculateColor(cameraRayStart, cameraRayDirection), 1.0f);
 }
