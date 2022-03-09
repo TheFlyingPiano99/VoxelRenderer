@@ -3,8 +3,6 @@
 #include<glm/glm.hpp>
 #include "shaderClass.h"
 #include "Camera.h"
-#include "Planet.h"
-#include "Sun.h"
 
 
 class PostprocessUnit
@@ -33,7 +31,6 @@ public:
 	void init();
 	void preShadowPassInit();
 	void preGeometryRenderPassInit(const glm::vec4& backgroundColor);
-	void renderToScreen(Camera& camera, Camera& lightCamera, Planet& planet, Sun& sun);
 	Shader* getShader();
 	~PostprocessUnit();
 

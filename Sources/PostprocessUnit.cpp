@@ -19,7 +19,7 @@ void PostprocessUnit::initColorFBO()
 	glGenTextures(2, framebufferColorTextures);
 	for (int i = 0; i < 2; i++) {
 		glBindTexture(GL_TEXTURE_2D, framebufferColorTextures[i]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -32,7 +32,7 @@ void PostprocessUnit::initColorFBO()
 	// Generating Depth and Stencil Texture:
 	glGenTextures(1, &framebufferDepthStencilTexture);
 	glBindTexture(GL_TEXTURE_2D, framebufferDepthStencilTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, windowWidth, windowHeight, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -109,43 +109,14 @@ void PostprocessUnit::preShadowPassInit()
 
 void PostprocessUnit::preGeometryRenderPassInit(const glm::vec4& backgroundColor)
 {
-	glViewport(0, 0, windowWidth, windowHeight);
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	glBindFramebuffer(GL_FRAMEBUFFER, colorFBO);
 	glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
 	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-	glUniform1i(glGetUniformLocation(shader->ID, "windowWidth"), windowWidth);
-	glUniform1i(glGetUniformLocation(shader->ID, "windowHeight"), windowHeight);
-}
-
-void PostprocessUnit::renderToScreen(Camera& camera, Camera& lightCamera, Planet& planet, Sun& sun)
-{
-	shader->Activate();
-
-	exportData();
-	camera.exportData(*shader);
-	lightCamera.exportPostprocessDataAsLightCamera(*shader);
-	planet.exportAtmosphere(*shader);
-	sun.exportData(*shader);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glBindVertexArray(rectVAO);
-	glDisable(GL_DEPTH_TEST);
-
-	glActiveTexture(GL_TEXTURE0 + 0);
-	glBindTexture(GL_TEXTURE_2D, framebufferColorTextures[0]);
-
-	glActiveTexture(GL_TEXTURE0 + 1);
-	glBindTexture(GL_TEXTURE_2D, framebufferColorTextures[1]);
-
-	glActiveTexture(GL_TEXTURE0 + 2);
-	glBindTexture(GL_TEXTURE_2D, framebufferDepthStencilTexture);
-
-	glActiveTexture(GL_TEXTURE0 + 3);
-	glBindTexture(GL_TEXTURE_2D, shadowDepthTexture);
-
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glUniform1i(glGetUniformLocation(shader->ID, "windowWidth"), WINDOW_WIDTH);
+	glUniform1i(glGetUniformLocation(shader->ID, "windowHeight"), WINDOW_HEIGHT);
 }
 
 

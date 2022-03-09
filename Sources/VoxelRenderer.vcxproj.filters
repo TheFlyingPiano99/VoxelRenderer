@@ -99,13 +99,7 @@
     <ClCompile Include="DualNumber.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Planet.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PostprocessUnit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Sun.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="imgui\imgui.cpp">
@@ -135,9 +129,6 @@
     <ClCompile Include="Stars.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Moon.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Texture3D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -154,6 +145,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Plane.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BoundingGeometry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -227,12 +221,6 @@
     <ClInclude Include="Mesh.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
-    <ClInclude Include="Moon.h">
-      <Filter>Header Files\Model</Filter>
-    </ClInclude>
-    <ClInclude Include="Planet.h">
-      <Filter>Header Files\Model</Filter>
-    </ClInclude>
     <ClInclude Include="PostprocessUnit.h">
       <Filter>Header Files\View</Filter>
     </ClInclude>
@@ -249,9 +237,6 @@
       <Filter>Header Files\Controller</Filter>
     </ClInclude>
     <ClInclude Include="Stars.h">
-      <Filter>Header Files\Model</Filter>
-    </ClInclude>
-    <ClInclude Include="Sun.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
     <ClInclude Include="TestObject.h">
@@ -284,6 +269,9 @@
     <ClInclude Include="Plane.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
+    <ClInclude Include="BoundingGeometry.h">
+      <Filter>Header Files\Model</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Resources\Shaders\default.frag">
@@ -305,6 +293,12 @@
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="..\Resources\Shaders\voxel.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\Resources\Shaders\bounding.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\Resources\Shaders\bounding.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
   </ItemGroup>

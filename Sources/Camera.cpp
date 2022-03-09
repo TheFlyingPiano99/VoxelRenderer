@@ -31,7 +31,6 @@ void Camera::updateMatrix()
 	invView = glm::inverse(view);			// Should be imporved!
 	invProjection = glm::inverse(projection);	// Should be imporved!
 	invCameraMatrix = invView * invProjection;
-
 }
 
 void Camera::updateOrientation(glm::vec3 newPrefUp)
@@ -44,7 +43,8 @@ void Camera::updateOrientation(glm::vec3 newPrefUp)
 void Camera::exportMatrix(Shader& shader)
 {
 	// Exports camera matrix
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "camMatrix"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "camera.invViewProjMatrix"), 1, GL_FALSE, glm::value_ptr(invCameraMatrix));
 }
 
 
@@ -59,8 +59,7 @@ void Camera::exportData(Shader& shader)
 	glUniform3f(glGetUniformLocation(shader.ID, "camera.up"), up.x, up.y, up.z);
 	glUniform1f(glGetUniformLocation(shader.ID, "camera.FOVrad"), glm::radians(FOVdeg));
 	glUniform1f(glGetUniformLocation(shader.ID, "camera.aspectRatio"), width / (float)height);
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "camera.Mat"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "camera.invMat"), 1, GL_FALSE, glm::value_ptr(invCameraMatrix));
+	exportMatrix(shader);
 }
 
 void Camera::exportPostprocessDataAsLightCamera(Shader& shader)
@@ -74,8 +73,8 @@ void Camera::exportPostprocessDataAsLightCamera(Shader& shader)
 	glUniform3f(glGetUniformLocation(shader.ID, "lightCamera.up"), up.x, up.y, up.z);
 	glUniform1f(glGetUniformLocation(shader.ID, "lightCamera.FOVrad"), glm::radians(FOVdeg));
 	glUniform1f(glGetUniformLocation(shader.ID, "lightCamera.aspectRatio"), width / (float)height);
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "lightCamera.Mat"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "lightCamera.invMat"), 1, GL_FALSE, glm::value_ptr(invCameraMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "lightCamera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "lightCamera.invViewProjMatrix"), 1, GL_FALSE, glm::value_ptr(invCameraMatrix));
 }
 
 

@@ -1,52 +1,29 @@
 #include "Texture3D.h"
 #include <iomanip>
+#include <vector>
 
-Texture3D::Texture3D(const char* file, GLuint slot, GLenum format, GLenum pixelType)
+Texture3D::Texture3D(const char* directory, const Dimensions dimensions, GLuint slot, GLenum format, GLenum pixelType)
+	: dimensions(dimensions)
 {
-	// Stores the width, height, and the number of color channels of the image
-	int widthImg, heightImg, depthImg, numColCh;
-	widthImg = 256;
-	heightImg = 256;
-	depthImg = 99;
-	numColCh = 1;
 
-	unsigned char* bytes = new unsigned char[widthImg * heightImg * depthImg * numColCh];
+	bytes = new unsigned char[dimensions.width * dimensions.height * dimensions.depth * dimensions.bytesPerVoxel];
 
 	// Flips the image so it appears right side up
-	stbi_set_flip_vertically_on_load(false);
+	//stbi_set_flip_vertically_on_load(false);
+
 	// Reads the image from a file and stores it in bytes
-	for (int z = 0; z < depthImg; z++) {
-		std::stringstream ss;
-		ss << file << std::setw(3) << std::setfill('0') << z + 1 << ".tif";
-		std::string str = ss.str();
+	for (int z = 0; z < dimensions.depth; z++) {
+		std::stringstream pathss;
+		pathss << directory << std::setw(3) << std::setfill('0') << z + 1 << ".tif";	// <directory/><number of image>.tif
+		std::string path = pathss.str();
 		FILE* file;
 		errno_t err;
-		//unsigned char* imageBytes = stbi_load(str.c_str(), &widthImg, &heightImg, &numColCh, 0);
-		if (err = fopen_s(&file, str.c_str(), "rb") == 0) {
-			int bytesCount = fread(bytes + z * widthImg * heightImg * numColCh, sizeof(char), widthImg * heightImg * numColCh, file);
+		//unsigned char* imageBytes = stbi_load(path.c_str(), &widthImg, &heightImg, &numColCh, 0);
+		if (err = fopen_s(&file, path.c_str(), "rb") == 0) {
+			int bytesCount = fread(bytes + z * dimensions.width * dimensions.height * dimensions.bytesPerVoxel, sizeof(char), dimensions.width * dimensions.height * dimensions.bytesPerVoxel, file);
 			fclose(file);
 		}
 	}
-
-	/*
-	// Reads the image from a file and stores it in bytes
-	unsigned char* bytes = new unsigned char[widthImg * heightImg * depthImg * numColCh];
-	for (int x = 0; x < widthImg; x++) {
-		for (int y = 0; y < heightImg; y++) {
-			for (int z = 0; z < depthImg; z++) {
-				int coord = x * heightImg * depthImg + y * depthImg + z;
-				float r = (x - 50) * (x - 50) + (y - 50) * (y - 50) + (z - 50) * (z - 50);
-				float r2 = (x - 50) * (x - 50) + (y - 50) * (y - 50);
-				if (r < 50 * 50 && r2 < 25 * 25) {	// F(x)
-					bytes[coord * numColCh] = 25 * 25 - r2 / 10.0;
-				}
-				else {
-					bytes[coord * numColCh] = 0;
-				}
-			}
-		}
-	}
-	*/
 
 	// Generates an OpenGL texture object
 	glGenTextures(1, &ID);
@@ -69,15 +46,21 @@ Texture3D::Texture3D(const char* file, GLuint slot, GLenum format, GLenum pixelT
 
 	// Assigns the image to the OpenGL Texture object
 	//TODO
-	glTexImage3D(GL_TEXTURE_3D, 0, format, widthImg, heightImg, depthImg, 0, format, pixelType, bytes);
+	glTexImage3D(GL_TEXTURE_3D, 0, format, dimensions.width, dimensions.height, dimensions.depth, 0, format, pixelType, bytes);
 	// Generates MipMaps
 	glGenerateMipmap(GL_TEXTURE_3D);
 
 	// Deletes the image data as it is already in the OpenGL Texture object
-	delete[] bytes;
 
 	// Unbinds the OpenGL Texture object so that it can't accidentally be modified
 	glBindTexture(GL_TEXTURE_3D, 0);
+}
+
+Texture3D::~Texture3D()
+{
+	if (bytes != nullptr) {
+		delete[] bytes;
+	}
 }
 
 void Texture3D::texUnit(Shader& shader, const char* uniform, GLuint unit)

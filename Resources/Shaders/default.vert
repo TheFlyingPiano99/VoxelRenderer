@@ -20,9 +20,12 @@ out vec3 color;
 out vec2 texCoord;
 
 
+struct Camera {
+	mat4 Mat;
+	mat4 invMat;
+};
+uniform Camera camera;
 
-// Imports the camera matrix from the main function
-uniform mat4 camMatrix;
 // Imports the model matrix from the main function
 uniform mat4 model;
 
@@ -32,12 +35,12 @@ void main()
 	// calculates current position
 	crntPos = vec3(model * vec4(aPos, 1.0f));
 	// Assigns the normal from the Vertex Data to "Normal"
-	Normal = aNormal;
+	Normal = (vec4(aNormal, 1) * camera.invMat).xyz;
 	// Assigns the colors from the Vertex Data to "color"
 	color = aColor;
 	// Assigns the texture coordinates from the Vertex Data to "texCoord"
 	texCoord = aTex;
 	
 	// Outputs the positions/coordinates of all vertices
-	gl_Position = camMatrix * vec4(crntPos, 1.0);
+	gl_Position = camera.Mat * vec4(crntPos, 1.0);
 }

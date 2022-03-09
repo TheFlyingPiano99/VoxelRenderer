@@ -1,0 +1,5 @@
+name = mrbrain
+width = 256
+height = 256
+depth = 99
+bytesPerVoxel = 1

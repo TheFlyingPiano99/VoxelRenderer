@@ -5,6 +5,8 @@ in vec2 texCoords;
 
 layout(binding=0) uniform sampler3D voxels;
 layout(binding=1) uniform sampler1D colorAttenuationTransfer;
+layout(binding=2) uniform sampler2D enterTexture;
+layout(binding=3) uniform sampler2D exitTexture;
 
 uniform int windowWidth;
 uniform int windowHeight;
@@ -212,37 +214,31 @@ float calculateShade(vec3 currentPos, Light light) {
 	return opacity * 0.8 + 0.2;
 }
 
-vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRayDirection) {
-	//Calculate bounding cube intersection:
-	float tNear, tFar;
-	cubeIntersection(vec3(0.0), resolution, cameraRayStart, cameraRayDirection, tNear, tFar);
-	float tIntersectionPlane = planeIntersection(intersectionPlane, cameraRayStart, cameraRayDirection);
+vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
+	vec3 cameraRayDirection = normalize(cameraRay);
+	float rayLength = length(cameraRay);
+	//float tIntersectionPlane = planeIntersection(intersectionPlane, cameraRayStart, cameraRayDirection);
 	vec3 color = vec3(0.0);
-	if (0.0 < tFar) {
-		if (tFar - tNear < 0.001) {	// Too small distance between two intersection points
-			tNear = 0.0;
-		}
-		if (0.0 < tIntersectionPlane && tIntersectionPlane > tNear && dot(cameraRayDirection, intersectionPlane.normal) < 0.0) {
+	if (0.00001 < rayLength) {
+	/*
+		if (0.0 < tIntersectionPlane && dot(cameraRayDirection, intersectionPlane.normal) < 0.0) {
 			tNear = tIntersectionPlane;
 		}
-		float distanceTravelled = tNear;
-		vec3 currentPos = cameraRayStart + tNear * cameraRayDirection;
+	*/
+		float distanceTravelled = 0.0;
+		vec3 currentPos = cameraRayStart;
 		int iterations = 0;
 
-		float delta = 1.0;
+		float delta = rayLength / 50.0;
 		float opacity = 1.0;
 		float shade = 1.0;
 		vec3 gradient;
-		while (distanceTravelled < tFar && iterations < 1000) {
-			if (currentPos.x >= 0 && currentPos.y >= 0 && currentPos.z >= 0.0
-			&& currentPos.x < resolution.x && currentPos.y < resolution.y && currentPos.z < resolution.z
-			&& dot(currentPos - intersectionPlane.point, intersectionPlane.normal) < 0.0) {	//Inside bounding cube
-				float intensity = trilinearInterpolation(currentPos, gradient);
-				vec4 colorAttenuation = texture(colorAttenuationTransfer, intensity);
-				shade = calculateShade(currentPos, light1);
-				color += delta * colorAttenuation.rgb * opacity * shade;	// Sum color
-				opacity *= (1 - colorAttenuation.a);	// Product opacity
-			}
+		while (distanceTravelled < rayLength) {
+			float intensity = trilinearInterpolation(currentPos, gradient);
+			vec4 colorAttenuation = texture(colorAttenuationTransfer, intensity);
+			shade = calculateShade(currentPos, light1);
+			color += delta * colorAttenuation.rgb * opacity * shade;	// Sum color
+			opacity *= pow(1 - colorAttenuation.a, delta);	// Product opacity
 			currentPos += cameraRayDirection * delta;
 			distanceTravelled += delta;
 			iterations++;
@@ -256,12 +252,13 @@ vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRayDirection) {
 
 
 void main() {
-	vec3 cameraRayStart;
-	vec3 cameraRayDirection;
-	calculateRayStart(texCoords * 2 - 1, cameraRayStart, cameraRayDirection);
+	//vec3 cameraRayStart;
+	//vec3 cameraRayDirection;
+	//calculateRayStart(vec2(texCoords.x, -texCoords.y) * 2 - 1, cameraRayStart, cameraRayDirection);
 	
-	vec3 hdrColor = calculateColor(cameraRayStart, cameraRayDirection);
-
+	vec3 start = texture(enterTexture, texCoords).xyz;
+	vec3 ray = texture(exitTexture, texCoords).xyz - start;
+	vec3 hdrColor = calculateColor(start, ray);
 	// HDR Tone mapping
     vec3 result = vec3(1.0) - exp(-hdrColor * exposure);
 	// GAMMA CORRECTION (OPTIONAL)

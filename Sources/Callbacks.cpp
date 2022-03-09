@@ -20,7 +20,7 @@ void Callbacks::setCallbacks(GLFWwindow* window) {
 
 void Callbacks::onWindowInit(GLFWwindow* window)
 {
-	glViewport(0, 0, windowWidth, windowHeight);
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
 
 	// Set control layout
@@ -70,7 +70,7 @@ void Callbacks::onMouseMove(GLFWwindow* window, double xpos, double ypos)
 		// Prevents camera from jumping on the first click
 		if (firstClick)
 		{
-			glfwSetCursorPos(window, (windowWidth / 2), (windowHeight / 2));
+			glfwSetCursorPos(window, (WINDOW_WIDTH / 2), (WINDOW_HEIGHT/ 2));
 			firstClick = false;
 		}
 
@@ -85,7 +85,7 @@ void Callbacks::onMouseMove(GLFWwindow* window, double xpos, double ypos)
 
 
 		// Sets mouse cursor to the middle of the screen so that it doesn't end up roaming around
-		glfwSetCursorPos(window, (windowWidth / 2), (windowHeight / 2));
+		glfwSetCursorPos(window, (WINDOW_WIDTH / 2), (WINDOW_HEIGHT/ 2));
 	}
 	else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE)
 	{

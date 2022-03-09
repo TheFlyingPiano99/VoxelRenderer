@@ -27,7 +27,9 @@ class Scene
 	bool pause = false;
 	bool gravitation = false;
 
-	Scene() {
+	unsigned int contextWidth, contextHeight;
+
+	Scene(unsigned int contextWidth, unsigned int contextHeight) : contextWidth(contextWidth), contextHeight(contextHeight) {
 
 	}
 

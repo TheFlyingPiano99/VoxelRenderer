@@ -2,8 +2,6 @@
 #include "GlobalInclude.h"
 #include "ControlActionManager.h"
 #include "AssetManager.h"
-#include "Planet.h"
-#include "Moon.h"
 
 #include "TestObject.h"
 
@@ -64,7 +62,7 @@ Scene* Scene::instance = nullptr;
 
 void Scene::initCamera()
 {
-	camera = new Camera(windowWidth, windowHeight, glm::vec3(0.0f, 0.0f, 0.0f), glm::normalize(glm::vec3(1, 1, 1)));
+	camera = new Camera(contextWidth, contextHeight, glm::vec3(0.0f, 0.0f, 0.0f), glm::normalize(glm::vec3(1, 1, 1)));
 }
 
 void Scene::initMeshesShadersObjects()
@@ -73,8 +71,13 @@ void Scene::initMeshesShadersObjects()
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("voxel.frag").c_str()
 	);
+	Shader* boundingShader = new Shader(
+		AssetManager::getInstance()->getShaderFolderPath().append("bounding.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("bounding.frag").c_str()
+	);
 	shaders.push_back(voxelShader);
-	voxels = new VoxelData(voxelShader, "D:/VisualCpp/VoxelRenderer/Resources/Volumetric/mrbrain-8bit/");
+	shaders.push_back(boundingShader);
+	voxels = new VoxelData(voxelShader, boundingShader, "D:/VisualCpp/VoxelRenderer/Resources/Volumetric/mrbrain-8bit/", contextWidth, contextHeight);
 }
 
 
@@ -96,7 +99,7 @@ void Scene::preGeometryRenderPassInit()
 Scene* Scene::getInstance()
 {
     if (instance == nullptr) {
-        instance = new Scene();
+        instance = new Scene(WINDOW_WIDTH, WINDOW_HEIGHT);
     }
     return instance;
 }
@@ -153,6 +156,7 @@ void Scene::animate(float dt)
 void Scene::draw()
 {
 	//preGeometryRenderPassInit();
+	camera->updateMatrix();
 	voxels->draw(*camera);
 	//postprocessUnit.renderToScreen(*camera, *sun->getLightCamera(), *planet, *sun);
 }

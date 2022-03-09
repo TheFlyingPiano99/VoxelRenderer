@@ -162,6 +162,7 @@
   <ItemGroup>
     <ClCompile Include="Animation.cpp" />
     <ClCompile Include="AssetManager.cpp" />
+    <ClCompile Include="BoundingGeometry.cpp" />
     <ClCompile Include="Callbacks.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="ControlAction.cpp" />
@@ -181,9 +182,7 @@
     <ClCompile Include="LightSource.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Mesh.cpp" />
-    <ClCompile Include="Moon.cpp" />
     <ClCompile Include="Plane.cpp" />
-    <ClCompile Include="Planet.cpp" />
     <ClCompile Include="PostprocessUnit.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SceneObject.cpp" />
@@ -191,7 +190,6 @@
     <ClCompile Include="SingletonManager.cpp" />
     <ClCompile Include="Stars.cpp" />
     <ClCompile Include="stb.cpp" />
-    <ClCompile Include="Sun.cpp" />
     <ClCompile Include="TestObject.cpp" />
     <ClCompile Include="Texture1D.cpp" />
     <ClCompile Include="Texture2D.cpp" />
@@ -204,6 +202,7 @@
   <ItemGroup>
     <ClInclude Include="Animation.h" />
     <ClInclude Include="AssetManager.h" />
+    <ClInclude Include="BoundingGeometry.h" />
     <ClInclude Include="Callbacks.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="ControlAction.h" />
@@ -224,9 +223,7 @@
     <ClInclude Include="ISceneObject.h" />
     <ClInclude Include="LightSource.h" />
     <ClInclude Include="MathUtil.h" />
-    <ClInclude Include="Moon.h" />
     <ClInclude Include="Plane.h" />
-    <ClInclude Include="Planet.h" />
     <ClInclude Include="PostprocessUnit.h" />
     <ClInclude Include="SingletonManager.h" />
     <ClInclude Include="Mesh.h" />
@@ -234,7 +231,6 @@
     <ClInclude Include="SceneObject.h" />
     <ClInclude Include="shaderClass.h" />
     <ClInclude Include="Stars.h" />
-    <ClInclude Include="Sun.h" />
     <ClInclude Include="TestObject.h" />
     <ClInclude Include="Texture1D.h" />
     <ClInclude Include="Texture2D.h" />
@@ -246,6 +242,8 @@
     <ClInclude Include="VoxelRenderUnit.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Resources\Shaders\bounding.frag" />
+    <None Include="..\Resources\Shaders\bounding.vert" />
     <None Include="..\Resources\Shaders\default.frag" />
     <None Include="..\Resources\Shaders\default.vert" />
     <None Include="..\Resources\Shaders\light.frag" />
