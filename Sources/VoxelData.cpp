@@ -6,14 +6,18 @@ void VoxelData::exportData()
 {
 	glUniform3f(glGetUniformLocation(shader->ID, "resolution"),
 		resolution.x ,resolution.y, resolution.z);
-	glUniform3f(glGetUniformLocation(shader->ID, "light1.direction"),
-		lightDir.x, lightDir.y, lightDir.z);
+	glUniform3f(glGetUniformLocation(shader->ID, "light1.position"),
+		lightPosition.x, lightPosition.y, lightPosition.z);
+	glUniform3f(glGetUniformLocation(shader->ID, "light1.intensity"),
+		lightIntensity.x, lightIntensity.y, lightIntensity.z);
 	glUniform1f(glGetUniformLocation(shader->ID, "exposure"), exposure);
 	glUniform1f(glGetUniformLocation(shader->ID, "gamma"), gamma);
-	plane.exportData(shader, "intersectionPlane");
+	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
+
+	glUniform1ui(glGetUniformLocation(shader->ID, "shadowSamples"), shadowSamples);
 }
 
-unsigned char* VoxelData::defaultTransferFunction(int resolution)
+unsigned char* VoxelData::skinTransferFunction(int resolution)
 {
 	unsigned char* bytes = new unsigned char[resolution * 4];
 	for (int i = 0; i < resolution; i++) {
@@ -87,6 +91,26 @@ unsigned char* VoxelData::defaultTransferFunction(int resolution)
 	return bytes;
 }
 
+unsigned char* VoxelData::defaultTransferFunction(int resolution)
+{
+	unsigned char* bytes = new unsigned char[resolution * 4];
+	for (int i = 0; i < resolution; i++) {
+		if (i > 3) {
+			bytes[i * 4] = i / (float)resolution * 256.0f;
+			bytes[i * 4 + 1] = i / (float)resolution * 256.0f * i / 256.0f;
+			bytes[i * 4 + 2] = i / (float)resolution * 256.0f * i / 256.0f;
+			bytes[i * 4 + 3] = (std::pow(i, 0.5) <= 256.0f)? std::pow(i, 0.5)  / (float)resolution * 256.0f : 256.0f;
+		}
+		else {
+			bytes[i * 4] = 0;
+			bytes[i * 4 + 1] = 0;
+			bytes[i * 4 + 2] = 0;
+			bytes[i * 4 + 3] = 0;
+		}
+	}
+	return bytes;
+}
+
 unsigned char* VoxelData::brainOnlyTransferFunction(int resolution)
 {
 	unsigned char* bytes = new unsigned char[resolution * 4];
@@ -130,20 +154,31 @@ bool VoxelData::readDimensions(const char* path, std::string& name, Dimensions& 
 			std::stringstream lineStream = std::stringstream(line);
 			while (std::getline(lineStream, token, ' ')) {
 				tokens.push_back(token);
-				if (tokens.size() >= 3 && tokens[tokens.size() - 3] == "name" && tokens[tokens.size() - 2] == "=") {
-					name = tokens[tokens.size() - 1];
-				}
-				else if (tokens.size() >= 3 && tokens[tokens.size() - 3] == "width" && tokens[tokens.size() - 2] == "=") {
-					dimensions.width = std::stoi(tokens[tokens.size() - 1]);
-				}
-				else if (tokens.size() >= 3 && tokens[tokens.size() - 3] == "height" && tokens[tokens.size() - 2] == "=") {
-					dimensions.height = std::stoi(tokens[tokens.size() - 1]);
-				}
-				else if (tokens.size() >= 3 && tokens[tokens.size() - 3] == "depth" && tokens[tokens.size() - 2] == "=") {
-					dimensions.depth = std::stoi(tokens[tokens.size() - 1]);
-				}
-				else if (tokens.size() >= 3 && tokens[tokens.size() - 3] == "bytesPerVoxel" && tokens[tokens.size() - 2] == "=") {
-					dimensions.bytesPerVoxel = std::stoi(tokens[tokens.size() - 1]);
+				if (tokens.size() >= 3 && tokens[tokens.size() - 2] == "=") {
+					if (tokens[tokens.size() - 3] == "name") {
+						name = tokens[tokens.size() - 1];
+					}
+					else if (tokens[tokens.size() - 3] == "width") {
+						dimensions.width = std::stoi(tokens[tokens.size() - 1]);
+					}
+					else if (tokens[tokens.size() - 3] == "height") {
+						dimensions.height = std::stoi(tokens[tokens.size() - 1]);
+					}
+					else if (tokens[tokens.size() - 3] == "depth") {
+						dimensions.depth = std::stoi(tokens[tokens.size() - 1]);
+					}
+					else if (tokens[tokens.size() - 3] == "bytesPerVoxel") {
+						dimensions.bytesPerVoxel = std::stoi(tokens[tokens.size() - 1]);
+					}
+					else if (tokens[tokens.size() - 3] == "widthScale") {
+						dimensions.widthScale = std::stof(tokens[tokens.size() - 1]);
+					}
+					else if (tokens[tokens.size() - 3] == "heightScale") {
+						dimensions.heightScale = std::stof(tokens[tokens.size() - 1]);
+					}
+					else if (tokens[tokens.size() - 3] == "depthScale") {
+						dimensions.depthScale = std::stof(tokens[tokens.size() - 1]);
+					}
 				}
 			}
 			tokens.clear();
@@ -168,6 +203,12 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, enterTexture, 0);
 
+	unsigned int rbo;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
 	// Exit FBO
 	glGenFramebuffers(1, &exitFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, exitFBO);
@@ -181,6 +222,12 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, exitTexture, 0);
+
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
 }
 
 void VoxelData::initQuad()
@@ -215,15 +262,22 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, const char* direc
 	maxAttenuation(255),
 	resolution(256, 256, 99),
 	plane(glm::vec3(100,100,50), glm::vec3(0,0,1)),
-	exposure(1.1f),
-	gamma(0.98f),
-	lightDir(glm::normalize(glm::vec3(1,1,1))),
-	boundingGeometry(_boundingShader)
+	exposure(1.0f),
+	gamma(0.4f),
+	lightPosition(glm::vec3(256,100,256)),
+	lightIntensity(glm::vec3(10500, 10500, 10000)),
+	boundingGeometry(_boundingShader),
+	scale(1.0f, 1.0f, 1.0f),
+	position(0.0f, 256.0f, 0.0f),
+	normal(0.0f, 0.0f, 1.0f),
+	up(0.0f, 1.0f, 0.0f),
+	shadowSamples(10)
 	{
 	// Stores the width, height, and the number of color channels of the image
 	Dimensions dimensions;
 	if (readDimensions(std::string(directory).append("dimensions.txt").c_str(), name, dimensions)) {
 		voxels = new Texture3D(directory, dimensions, 0, GL_RED, GL_UNSIGNED_BYTE);
+		scale = glm::vec3(dimensions.widthScale, dimensions.heightScale, dimensions.depthScale);
 	}
 	else {
 		throw new std::exception("Failed to read dimensions of voxel data!");
@@ -236,6 +290,8 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, const char* direc
 	initQuad();
 	initFBOs(contextWidth, contextHeight);
 	boundingGeometry.updateGeometry(*voxels);
+
+	updateModelMatrix();
 }
 
 VoxelData::~VoxelData() {
@@ -250,12 +306,26 @@ void VoxelData::animate(float dt)
 {
 	glm::mat4 M(1);
 	M = glm::rotate(M, dt * 0.001f, glm::vec3(0, 1, 0));
-	glm::vec4 rotated = M * glm::vec4(lightDir, 1);
-	lightDir = rotated;
+	glm::vec4 rotated = M * glm::vec4(lightPosition, 1);
+	lightPosition = rotated;
+
 }
 
+void VoxelData::optimize(float dt, bool paused, float cameraLastActive) {
+	static int hardCap = 20;
+	if (paused) {
+		int c = cameraLastActive / 20;
+		hardCap = 0.8 * hardCap + 0.2 * 30.0 / dt;
+		shadowSamples = (hardCap >= c)? c : hardCap;
+	}
+	else {
+		shadowSamples = 3;
+	}
+}
+
+
 void VoxelData::draw(Camera& camera) {
-	boundingGeometry.draw(camera, enterFBO, exitFBO);
+	boundingGeometry.draw(camera, modelMatrix, enterFBO, exitFBO);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_CULL_FACE);
@@ -276,6 +346,12 @@ void VoxelData::draw(Camera& camera) {
 	glEnable(GL_CULL_FACE);
 	voxels->Unbind();
 	transferFunction->Unbind();
+}
+
+void VoxelData::updateModelMatrix()
+{
+	modelMatrix = glm::translate(position) *  glm::orientation(normal, up) *  glm::scale(scale);
+	invModelMatrix = glm::inverse(modelMatrix);
 }
 
 void VoxelData::shiftIntersectionPlane(float delta)

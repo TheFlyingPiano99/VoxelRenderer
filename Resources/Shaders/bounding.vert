@@ -4,7 +4,7 @@
 layout (location = 0) in vec3 aPos;
 
 // Outputs the current position for the Fragment Shader
-out vec3 worldPos;
+out vec3 modelPos;
 
 // Imports the camera matrix from the main function
 struct Camera {
@@ -17,6 +17,6 @@ uniform mat4 modelMatrix;
 
 void main()
 {
-	worldPos = (modelMatrix * vec4(aPos, 1)).xyz;	
+	modelPos = aPos;
 	gl_Position = camera.viewProjMatrix * modelMatrix * vec4(aPos, 1.0);
 }

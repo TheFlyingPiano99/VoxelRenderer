@@ -19,27 +19,42 @@ class VoxelData
 
 	BoundingGeometry boundingGeometry;
 
+	glm::vec3 scale;
+	glm::vec3 position;
+	glm::vec3 normal;
+	glm::vec3 up;
+
+	glm::mat4 modelMatrix;
+	glm::mat4 invModelMatrix;
+
 	float maxIntensity;
 	float maxAttenuation;
 	glm::vec3 resolution;
 	Plane plane;
 	float exposure, gamma;
-	glm::vec3 lightDir;
+	glm::vec3 lightPosition;
+	glm::vec3 lightIntensity;
 	std::string name;
+
+	unsigned int shadowSamples;
 
 	void exportData();
 	static unsigned char* defaultTransferFunction(int resolution);
+	static unsigned char* skinTransferFunction(int resolution);
 	static unsigned char* brainOnlyTransferFunction(int resolution);
 
 	bool readDimensions(const char* path, std::string& name, Dimensions& dimensions);
 	void initFBOs(unsigned int contextWidth, unsigned int contextHeight);
 	void initQuad();
 
+	void updateModelMatrix();
+
 public :
 	VoxelData(Shader* _shader, Shader* boundingShader, const char* directory, unsigned int contextWidth, unsigned int contextHeight);
 	~VoxelData();
 
 	void animate(float dt);
+	void optimize(float dt, bool paused, float cameraLastActive);
 	void draw(Camera& camera);
 
 	void shiftIntersectionPlane(float delta);

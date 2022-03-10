@@ -11,6 +11,8 @@ class BoundingGeometry
 	std::vector<GLuint> indices;
 	glm::mat4 modelMatrix;
 
+	void addCuboid(glm::vec3 scale, glm::vec3 translation);
+
 public:
 	BoundingGeometry(Shader* _shader) 
 		: shader(_shader), modelMatrix(1.0f) {
@@ -21,6 +23,6 @@ public:
 
 	void updateGeometry(Texture3D& voxels);
 
-	void draw(Camera& camera, unsigned int enterFBO, unsigned int exitFBO);
+	void draw(Camera& camera, glm::mat4& modelMatrix, unsigned int enterFBO, unsigned int exitFBO);
 };
 

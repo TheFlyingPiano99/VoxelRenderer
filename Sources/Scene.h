@@ -26,7 +26,7 @@ class Scene
 
 	bool pause = false;
 	bool gravitation = false;
-
+	float cameraLastActive = 1000.0f;
 	unsigned int contextWidth, contextHeight;
 
 	Scene(unsigned int contextWidth, unsigned int contextHeight) : contextWidth(contextWidth), contextHeight(contextHeight) {
@@ -64,5 +64,7 @@ public:
 	Camera* getCamera();
 
 	VoxelData* getVoxelData();
+
+
 };
 

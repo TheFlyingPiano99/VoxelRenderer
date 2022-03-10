@@ -23,7 +23,7 @@ public:
 	glm::mat4 invCameraMatrix = glm::mat4(1.0f);
 	float FOVdeg = 45.0f;
 	float nearPlane = 1.0f;
-	float farPlane = 500.0f;
+	float farPlane = 1000.0f;
 
 	// Prevents the camera from jumping around when first clicking left click
 	bool firstClick = true;
@@ -33,7 +33,7 @@ public:
 	int height;
 
 	// Adjust the speed of the camera and it's sensitivity when looking around
-	float speed = 0.2f;
+	float speed = 0.8f;
 	float sensitivity = 100.0f;
 
 	// Camera constructor to set up initial values

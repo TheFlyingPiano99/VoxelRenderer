@@ -8,6 +8,7 @@
 
 struct Dimensions {
 	int width, height, depth, bytesPerVoxel;
+	float widthScale, heightScale, depthScale = 1.0f;
 };
 
 class Texture3D

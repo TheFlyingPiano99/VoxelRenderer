@@ -77,7 +77,7 @@ void Scene::initMeshesShadersObjects()
 	);
 	shaders.push_back(voxelShader);
 	shaders.push_back(boundingShader);
-	voxels = new VoxelData(voxelShader, boundingShader, "D:/VisualCpp/VoxelRenderer/Resources/Volumetric/mrbrain-8bit/", contextWidth, contextHeight);
+	voxels = new VoxelData(voxelShader, boundingShader, "D:/VisualCpp/VoxelRenderer/Resources/Volumetric/cthead-8bit/", contextWidth, contextHeight);
 }
 
 
@@ -144,6 +144,9 @@ void Scene::destroy()
 void Scene::control(float dt)
 {
     ControlActionManager::getInstance()->executeQueue(this, dt);
+
+	voxels->optimize(dt, pause, cameraLastActive);
+	cameraLastActive += dt;
 }
 
 void Scene::animate(float dt)
@@ -177,6 +180,7 @@ PostprocessUnit* Scene::getPostprocessUnit()
 }
 
 Camera* Scene::getCamera() {
+	cameraLastActive = 0.0f;
     return camera;
 }
 

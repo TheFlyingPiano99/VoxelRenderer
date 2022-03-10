@@ -2,45 +2,52 @@
 #include"EBO.h"
 #include "VBO.h"
 
+glm::vec3 cubeVertices[] =
+{
+	glm::vec3(0.0f, 0.0f,  1.0f),
+	glm::vec3(0.0f, 0.0f, 0.0f),
+	glm::vec3(1.0f, 0.0f, 0.0f),
+	glm::vec3(1.0f, 0.0f,  1.0f),
+	glm::vec3(0.0f,  1.0f,  1.0f),
+	glm::vec3(0.0f,  1.0f, 0.0f),
+	glm::vec3(1.0f,  1.0f, 0.0f),
+	glm::vec3(1.0f,  1.0f,  1.0f)
+};
+
+GLuint cubeIndices[] =
+{
+	0, 2, 1,
+	0, 3, 2,
+	0, 4, 7,
+	0, 7, 3,
+	3, 7, 6,
+	3, 6, 2,
+	2, 6, 5,
+	2, 5, 1,
+	1, 5, 4,
+	1, 4, 0,
+	4, 5, 6,
+	4, 6, 7
+};
+
+void BoundingGeometry::addCuboid(glm::vec3 scale, glm::vec3 translation) {
+	int indexOffset = vertices.size();
+	for (int i = 0; i < 8; i++) {
+		vertices.push_back(cubeVertices[i] * scale + translation);
+	}
+	for (int i = 0; i < 36; i++) {
+		indices.push_back(cubeIndices[i] + indexOffset);
+	}
+}
+
 void BoundingGeometry::updateGeometry(Texture3D& voxels)
 {
 	Dimensions dimensions = voxels.getDimensions();
 
-	glm::mat4 scale = glm::scale(glm::vec3(dimensions.width, dimensions.height, dimensions.depth));
-	//glm::mat4 translate = glm::translate(glm::vec3(dimensions.width / 2.0f, dimensions.height / 2.0f, dimensions.depth / 2.0f));
-	modelMatrix = scale;
-
-	glm::vec3 cubeVertices[] =
-	{
-		glm::vec3(0.0f, 0.0f,  1.0f),
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(1.0f, 0.0f, 0.0f),
-		glm::vec3(1.0f, 0.0f,  1.0f),
-		glm::vec3(0.0f,  1.0f,  1.0f),
-		glm::vec3(0.0f,  1.0f, 0.0f),
-		glm::vec3(1.0f,  1.0f, 0.0f),
-		glm::vec3(1.0f,  1.0f,  1.0f)
-	};
-
-	GLuint cubeIndices[] =
-	{
-		0, 2, 1,
-		0, 3, 2,
-		0, 4, 7,
-		0, 7, 3,
-		3, 7, 6,
-		3, 6, 2,
-		2, 6, 5,
-		2, 5, 1,
-		1, 5, 4,
-		1, 4, 0,
-		4, 5, 6,
-		4, 6, 7
-	};
 	vertices.clear();
 	indices.clear();
-	vertices.insert(vertices.begin(), std::begin(cubeVertices), std::end(cubeVertices));
-	indices.insert(indices.begin(), std::begin(cubeIndices), std::end(cubeIndices));
+
+	addCuboid(glm::vec3(dimensions.width, dimensions.height, dimensions.depth), glm::vec3(0.0f));
 
 	//---------------------------------------------------------------------------------
 
@@ -56,7 +63,7 @@ void BoundingGeometry::updateGeometry(Texture3D& voxels)
 	VAO.Unbind();
 }
 
-void BoundingGeometry::draw(Camera& camera, unsigned int enterFBO, unsigned int exitFBO)
+void BoundingGeometry::draw(Camera& camera, glm::mat4& modelMatrix, unsigned int enterFBO, unsigned int exitFBO)
 {
 	shader->Activate();
 	VAO.Bind();
@@ -65,14 +72,20 @@ void BoundingGeometry::draw(Camera& camera, unsigned int enterFBO, unsigned int 
 
 	glBindFramebuffer(GL_FRAMEBUFFER, enterFBO);
 	glClearColor(camera.Position.x, camera.Position.y, camera.Position.z, 0);
+	glClearDepth(1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glCullFace(GL_FRONT);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, exitFBO);
 	glClearColor(camera.Position.x, camera.Position.y, camera.Position.z, 0);
+	glClearDepth(0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glCullFace(GL_BACK);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_GREATER);
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 
 }
