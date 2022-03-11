@@ -211,6 +211,7 @@
     <ClInclude Include="EBO.h" />
     <ClInclude Include="GlobalInclude.h" />
     <ClInclude Include="GUI.h" />
+    <ClInclude Include="Light.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imgui_impl_glfw.h" />

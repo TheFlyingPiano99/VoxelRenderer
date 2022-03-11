@@ -7,13 +7,13 @@ void VoxelData::exportData()
 	glUniform3f(glGetUniformLocation(shader->ID, "resolution"),
 		resolution.x ,resolution.y, resolution.z);
 	glUniform3f(glGetUniformLocation(shader->ID, "light1.position"),
-		lightPosition.x, lightPosition.y, lightPosition.z);
+		light1.position.x, light1.position.y, light1.position.z);
 	glUniform3f(glGetUniformLocation(shader->ID, "light1.intensity"),
-		lightIntensity.x, lightIntensity.y, lightIntensity.z);
+		light1.intensity.x, light1.intensity.y, light1.intensity.z);
+	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "light1.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(light1.viewProjMatrix));
 	glUniform1f(glGetUniformLocation(shader->ID, "exposure"), exposure);
 	glUniform1f(glGetUniformLocation(shader->ID, "gamma"), gamma);
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
-
 	glUniform1ui(glGetUniformLocation(shader->ID, "shadowSamples"), shadowSamples);
 }
 
@@ -223,11 +223,25 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, exitTexture, 0);
 
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);	// The same render buffer to both exit and enter FBOs.
+
+	glGenFramebuffers(1, &lightFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, lightFBO);
+
+	glGenTextures(1, &lightTexture);
+	glBindTexture(GL_TEXTURE_2D, lightTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 2048, 2048, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightTexture, 0);
+
 	glGenRenderbuffers(1, &rbo);
 	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 2048, 2048);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
 }
 
 void VoxelData::initQuad()
@@ -264,14 +278,12 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, const char* direc
 	plane(glm::vec3(100,100,50), glm::vec3(0,0,1)),
 	exposure(1.0f),
 	gamma(0.4f),
-	lightPosition(glm::vec3(256,100,256)),
-	lightIntensity(glm::vec3(10500, 10500, 10000)),
 	boundingGeometry(_boundingShader),
 	scale(1.0f, 1.0f, 1.0f),
 	position(0.0f, 256.0f, 0.0f),
 	normal(0.0f, 0.0f, 1.0f),
 	up(0.0f, 1.0f, 0.0f),
-	shadowSamples(10)
+	shadowSamples(3)
 	{
 	// Stores the width, height, and the number of color channels of the image
 	Dimensions dimensions;
@@ -291,7 +303,10 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, const char* direc
 	initFBOs(contextWidth, contextHeight);
 	boundingGeometry.updateGeometry(*voxels);
 
-	updateModelMatrix();
+	updateMatrices();
+
+	light1.position = glm::vec3(300, 200, 300);
+	light1.intensity = glm::vec3(11000, 11000, 10000);
 }
 
 VoxelData::~VoxelData() {
@@ -306,12 +321,11 @@ void VoxelData::animate(float dt)
 {
 	glm::mat4 M(1);
 	M = glm::rotate(M, dt * 0.001f, glm::vec3(0, 1, 0));
-	glm::vec4 rotated = M * glm::vec4(lightPosition, 1);
-	lightPosition = rotated;
-
+	light1.position = M * glm::vec4(light1.position, 1);
 }
 
 void VoxelData::optimize(float dt, bool paused, float cameraLastActive) {
+	return;
 	static int hardCap = 20;
 	if (paused) {
 		int c = cameraLastActive / 20;
@@ -325,7 +339,7 @@ void VoxelData::optimize(float dt, bool paused, float cameraLastActive) {
 
 
 void VoxelData::draw(Camera& camera) {
-	boundingGeometry.draw(camera, modelMatrix, enterFBO, exitFBO);
+	boundingGeometry.draw(camera, light1, modelMatrix, invModelMatrix, enterFBO, exitFBO, lightFBO);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_CULL_FACE);
@@ -342,16 +356,25 @@ void VoxelData::draw(Camera& camera) {
 	glActiveTexture(GL_TEXTURE0 + 3);
 	glBindTexture(GL_TEXTURE_2D, exitTexture);
 
+	glActiveTexture(GL_TEXTURE0 + 4);
+	glBindTexture(GL_TEXTURE_2D, lightTexture);
+
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glEnable(GL_CULL_FACE);
 	voxels->Unbind();
 	transferFunction->Unbind();
 }
 
-void VoxelData::updateModelMatrix()
+void VoxelData::updateMatrices()
 {
 	modelMatrix = glm::translate(position) *  glm::orientation(normal, up) *  glm::scale(scale);
 	invModelMatrix = glm::inverse(modelMatrix);
+	// Makes camera look in the right direction from the right position
+	glm::mat4 view = glm::lookAt(light1.position, light1.position + glm::normalize(position - light1.position), up);
+	// Adds perspective to the scene
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 1000.0f);
+
+	light1.viewProjMatrix = projection * view;
 }
 
 void VoxelData::shiftIntersectionPlane(float delta)

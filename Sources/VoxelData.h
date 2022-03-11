@@ -6,7 +6,7 @@
 #include "Plane.h"
 #include "Mesh.h"
 #include "BoundingGeometry.h"
-
+#include "Light.h"
 
 class VoxelData
 {
@@ -14,8 +14,8 @@ class VoxelData
 	Texture3D* voxels = nullptr;
 	Texture1D* transferFunction = nullptr;
 	VAO quadVAO;
-	unsigned int enterFBO, exitFBO;
-	unsigned int enterTexture, exitTexture;
+	unsigned int enterFBO, exitFBO, lightFBO;
+	unsigned int enterTexture, exitTexture, lightTexture;
 
 	BoundingGeometry boundingGeometry;
 
@@ -32,8 +32,7 @@ class VoxelData
 	glm::vec3 resolution;
 	Plane plane;
 	float exposure, gamma;
-	glm::vec3 lightPosition;
-	glm::vec3 lightIntensity;
+	Light light1;
 	std::string name;
 
 	unsigned int shadowSamples;
@@ -47,7 +46,7 @@ class VoxelData
 	void initFBOs(unsigned int contextWidth, unsigned int contextHeight);
 	void initQuad();
 
-	void updateModelMatrix();
+	void updateMatrices();
 
 public :
 	VoxelData(Shader* _shader, Shader* boundingShader, const char* directory, unsigned int contextWidth, unsigned int contextHeight);

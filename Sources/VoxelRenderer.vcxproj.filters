@@ -272,6 +272,9 @@
     <ClInclude Include="BoundingGeometry.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
+    <ClInclude Include="Light.h">
+      <Filter>Header Files\Model</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Resources\Shaders\default.frag">

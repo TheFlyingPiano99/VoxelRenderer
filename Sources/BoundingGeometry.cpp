@@ -63,29 +63,39 @@ void BoundingGeometry::updateGeometry(Texture3D& voxels)
 	VAO.Unbind();
 }
 
-void BoundingGeometry::draw(Camera& camera, glm::mat4& modelMatrix, unsigned int enterFBO, unsigned int exitFBO)
+void BoundingGeometry::draw(Camera& camera, Light& light, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, unsigned int enterFBO, unsigned int exitFBO, unsigned int lightFBO)
 {
 	shader->Activate();
 	VAO.Bind();
 	camera.exportMatrix(*shader);
+	glm::vec4 modelSpaceCameraPos = invModelMatrix * glm::vec4(camera.Position, 1.0f);
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-	glBindFramebuffer(GL_FRAMEBUFFER, enterFBO);
-	glClearColor(camera.Position.x, camera.Position.y, camera.Position.z, 0);
-	glClearDepth(1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glDisable(GL_CULL_FACE);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-
 	glBindFramebuffer(GL_FRAMEBUFFER, exitFBO);
-	glClearColor(camera.Position.x, camera.Position.y, camera.Position.z, 0);
+	glClearColor(modelSpaceCameraPos.x, modelSpaceCameraPos.y, modelSpaceCameraPos.z, 0);
 	glClearDepth(0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_GREATER);
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, enterFBO);
+	glClearColor(modelSpaceCameraPos.x, modelSpaceCameraPos.y, modelSpaceCameraPos.z, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 
+	glBindFramebuffer(GL_FRAMEBUFFER, lightFBO);
+	glm::vec4 modelSpaceLightPos = invModelMatrix * glm::vec4(light.position, 1.0f);
+	glClearColor(modelSpaceLightPos.x, modelSpaceLightPos.y, modelSpaceLightPos.z, 0);
+	glClearDepth(1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(light.viewProjMatrix));
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 }

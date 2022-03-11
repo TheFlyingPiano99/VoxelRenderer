@@ -7,6 +7,7 @@ layout(binding=0) uniform sampler3D voxels;
 layout(binding=1) uniform sampler1D colorAttenuationTransfer;
 layout(binding=2) uniform sampler2D enterTexture;
 layout(binding=3) uniform sampler2D exitTexture;
+layout(binding=4) uniform sampler2D lightTexture;
 
 uniform vec3 resolution;
 uniform mat4 invModelMatrix;
@@ -20,6 +21,7 @@ uniform unsigned int shadowSamples;
 struct Light {
 	vec3 position;
 	vec3 intensity;
+	mat4 viewProjMatrix;
 };
 uniform Light light1;
 
@@ -50,18 +52,26 @@ float trilinearInterpolation(vec3 currentPos, out vec3 grad) {
 }
 
 
-vec3 calculateLightLevel(vec3 currentPos, vec3 toLight, vec3 sourceIntensity) {
-	float delta = length(toLight) / float(shadowSamples) / 100.0f;
-	vec3 lightDir = normalize(toLight);
+vec3 calculateLightLevel(vec3 currentPos, Light light) {
+	vec4 lightCameraSpaceCoord = light.viewProjMatrix * vec4(currentPos, 1);
+	vec3 lightBeamEndPos = texture(lightTexture, lightCameraSpaceCoord.xy / lightCameraSpaceCoord.w / 2.0 + vec2(0.5)).xyz;
+	vec3 toLightBeamEnd = lightBeamEndPos - currentPos;
+	float delta = length(toLightBeamEnd) / float(shadowSamples) / 10.0f;
+	vec3 lightDir = normalize(toLightBeamEnd);
 	vec3 samplePos = currentPos + lightDir * delta;
+	float distanceTravelled = 0.0;
+	vec3 toLightSource = light.position - currentPos;
+	float disanceToLightSource = length(toLightSource);
 	float opacity = 1.0;
 	for (int i = 0; i < shadowSamples; i++) {
 		float intensity = texture(voxels, samplePos / resolution).r;
-		opacity *= pow(1 - texture(colorAttenuationTransfer, intensity).a, delta);
+		opacity *= (distanceTravelled / disanceToLightSource) + pow(1 - texture(colorAttenuationTransfer, intensity).a, delta)
+		* (1 - distanceTravelled / disanceToLightSource);
 		samplePos += lightDir * delta;
+		distanceTravelled += delta;
 		delta *= 1.01;
 	}
-	return 0.9 * opacity / dot(toLight, toLight) * sourceIntensity + vec3(0.1);
+	return 0.9 * opacity / disanceToLightSource / disanceToLightSource * light.intensity + vec3(0.1);
 }
 
 vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
@@ -80,7 +90,7 @@ vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
 		while (distanceTravelled < rayLength) {
 			float intensity = trilinearInterpolation(currentPos, gradient);
 			vec4 colorAttenuation = texture(colorAttenuationTransfer, intensity);
-			vec3 lightLevel = calculateLightLevel(currentPos, lightPos - currentPos, light1.intensity);
+			vec3 lightLevel = calculateLightLevel(currentPos, light1);
 			color += delta * colorAttenuation.rgb * opacity * lightLevel;	// Sum color
 			opacity *= pow(1 - colorAttenuation.a, delta);	// Product opacity
 			currentPos += cameraRayDirection * delta;

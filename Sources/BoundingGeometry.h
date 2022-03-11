@@ -2,6 +2,7 @@
 #include "VAO.h"
 #include "Camera.h"
 #include "Texture3D.h"
+#include "Light.h"
 
 class BoundingGeometry
 {
@@ -23,6 +24,6 @@ public:
 
 	void updateGeometry(Texture3D& voxels);
 
-	void draw(Camera& camera, glm::mat4& modelMatrix, unsigned int enterFBO, unsigned int exitFBO);
+	void draw(Camera& camera, Light& light, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, unsigned int enterFBO, unsigned int exitFBO, unsigned int lightFBO);
 };
 
