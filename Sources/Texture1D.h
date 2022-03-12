@@ -17,6 +17,11 @@ public:
 	unsigned int width = 0;
 
 	Texture1D(unsigned char* bytes, int width, GLuint slot, GLenum format, GLenum pixelType);
+	~Texture1D() {
+		if (bytes != nullptr) {
+			delete[] bytes;
+		}
+	}
 
 	// Assigns a texture unit to a texture
 	void texUnit(Shader& shader, const char* uniform, GLuint unit);

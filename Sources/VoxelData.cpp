@@ -99,13 +99,13 @@ unsigned char* VoxelData::defaultTransferFunction(int resolution)
 			bytes[i * 4] = i / (float)resolution * 255.0f;
 			bytes[i * 4 + 1] = i / (float)resolution * 255.0f * i / 255.0f;
 			bytes[i * 4 + 2] = i / (float)resolution * 255.0f * i / 255.0f;
-			bytes[i * 4 + 3] = (std::pow(i - 3, 0.2) <= 255.0f)? std::pow(i - 3, 0.2)  / (float)resolution * 255.0f : 255;
+			bytes[i * 4 + 3] = (std::pow(i - 3, 0.5) <= 255.0f)? std::pow(i - 3, 0.5)  / (float)resolution * 255.0f : 255;
 		}
 		else {
-			bytes[i * 4] = 0;
-			bytes[i * 4 + 1] = 0;
-			bytes[i * 4 + 2] = 0;
-			bytes[i * 4 + 3] = 0;
+			bytes[i * 4] = (unsigned char)0;
+			bytes[i * 4 + 1] = (unsigned char)0;
+			bytes[i * 4 + 2] = (unsigned char)0;
+			bytes[i * 4 + 3] = (unsigned char)0;
 		}
 	}
 	return bytes;
@@ -319,11 +319,10 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, const char* direc
 
 	unsigned char* transferBytes = defaultTransferFunction(256);
 	transferFunction = new Texture1D(transferBytes, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE);
-	delete[] transferBytes;
 
 	initQuad();
 	initFBOs(contextWidth, contextHeight);
-	boundingGeometry.updateGeometry(*voxels, *transferFunction, 0.1f);
+	boundingGeometry.updateGeometry(*voxels, *transferFunction, 0.003f);
 
 	light1.position = glm::vec3(128, 50, 128);
 	light1.intensity = glm::vec3(11000, 11000, 9000);

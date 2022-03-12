@@ -188,13 +188,7 @@ void BoundingGeometry::calculateFilled(const Dimensions& dimensions,
 					z * dimensions.height * dimensions.width * dimensions.bytesPerVoxel
 						+ y * dimensions.width * dimensions.bytesPerVoxel
 						+ x * dimensions.bytesPerVoxel]);
-				float increment;
-				if (0 < intensity && intensity < 3) {
-					std::cout << "small intesity\n";
-					increment = 0.0f;
-				}
-				unsigned char c = transferFunction.getBytes()[intensity * 4 + 3];
-				increment = c / 255.0f;
+				float increment = (float)transferFunction.getBytes()[intensity * 4 + 3] / 255.0f;
 
 				int idx = indexDivisionSized((x / xBlockSize), (y / yBlockSize), (z / zBlockSize), xDivision, yDivision, zDivision);
 				averageOpacity[idx] += increment / (float)voxelsPerBlock;
