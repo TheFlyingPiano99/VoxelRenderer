@@ -96,10 +96,10 @@ unsigned char* VoxelData::defaultTransferFunction(int resolution)
 	unsigned char* bytes = new unsigned char[resolution * 4];
 	for (int i = 0; i < resolution; i++) {
 		if (i > 3) {
-			bytes[i * 4] = i / (float)resolution * 256.0f;
-			bytes[i * 4 + 1] = i / (float)resolution * 256.0f * i / 256.0f;
-			bytes[i * 4 + 2] = i / (float)resolution * 256.0f * i / 256.0f;
-			bytes[i * 4 + 3] = (std::pow(i, 0.5) <= 256.0f)? std::pow(i, 0.5)  / (float)resolution * 256.0f : 256.0f;
+			bytes[i * 4] = i / (float)resolution * 255.0f;
+			bytes[i * 4 + 1] = i / (float)resolution * 255.0f * i / 255.0f;
+			bytes[i * 4 + 2] = i / (float)resolution * 255.0f * i / 255.0f;
+			bytes[i * 4 + 3] = (std::pow(i - 3, 0.2) <= 255.0f)? std::pow(i - 3, 0.2)  / (float)resolution * 255.0f : 255;
 		}
 		else {
 			bytes[i * 4] = 0;
@@ -137,6 +137,27 @@ unsigned char* VoxelData::brainOnlyTransferFunction(int resolution)
 		}
 	}
 	return bytes;
+}
+
+unsigned char* VoxelData::solidTransferFunction(int resolution)
+{
+	unsigned char* bytes = new unsigned char[resolution * 4];
+	for (int i = 0; i < resolution; i++) {
+		if (i > 2) {
+			bytes[i * 4] = 256;
+			bytes[i * 4 + 1] = 256;
+			bytes[i * 4 + 2] = 256;
+			bytes[i * 4 + 3] = 256;
+		}
+		else {
+			bytes[i * 4] = 0;
+			bytes[i * 4 + 1] = 0;
+			bytes[i * 4 + 2] = 0;
+			bytes[i * 4 + 3] = 0;
+		}
+	}
+	return bytes;
+
 }
 
 bool VoxelData::readDimensions(const char* path, std::string& name, Dimensions& dimensions)
@@ -280,9 +301,10 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, const char* direc
 	gamma(0.4f),
 	boundingGeometry(_boundingShader),
 	scale(1.0f, 1.0f, 1.0f),
-	position(0.0f, 256.0f, 0.0f),
+	position(0.0f, 0.0f, 0.0f),
 	normal(0.0f, 0.0f, 1.0f),
 	up(0.0f, 1.0f, 0.0f),
+	eulerAngles(0.0f, 0.0f, 0.0f),
 	shadowSamples(3)
 	{
 	// Stores the width, height, and the number of color channels of the image
@@ -301,12 +323,12 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, const char* direc
 
 	initQuad();
 	initFBOs(contextWidth, contextHeight);
-	boundingGeometry.updateGeometry(*voxels);
+	boundingGeometry.updateGeometry(*voxels, *transferFunction, 0.1f);
+
+	light1.position = glm::vec3(128, 50, 128);
+	light1.intensity = glm::vec3(11000, 11000, 9000);
 
 	updateMatrices();
-
-	light1.position = glm::vec3(300, 200, 300);
-	light1.intensity = glm::vec3(11000, 11000, 10000);
 }
 
 VoxelData::~VoxelData() {
@@ -319,9 +341,10 @@ VoxelData::~VoxelData() {
 
 void VoxelData::animate(float dt)
 {
-	glm::mat4 M(1);
-	M = glm::rotate(M, dt * 0.001f, glm::vec3(0, 1, 0));
-	light1.position = M * glm::vec4(light1.position, 1);
+//	glm::mat4 M = glm::rotate(dt * 0.001f, up);
+//	normal = M * glm::vec4(normal, 0);
+	eulerAngles.y += dt * 0.0001;
+	updateMatrices();
 }
 
 void VoxelData::optimize(float dt, bool paused, float cameraLastActive) {
@@ -367,13 +390,19 @@ void VoxelData::draw(Camera& camera) {
 
 void VoxelData::updateMatrices()
 {
-	modelMatrix = glm::translate(position) *  glm::orientation(normal, up) *  glm::scale(scale);
+	Dimensions dim = voxels->getDimensions();
+	modelMatrix =
+		glm::translate(position)
+		* glm::rotate(eulerAngles.x, glm::vec3(1, 0, 0))
+		* glm::rotate(eulerAngles.z, glm::vec3(0, 0, 1))
+		* glm::rotate(eulerAngles.y, glm::vec3(0, 1, 0))
+		* glm::orientation(normal, up)
+		* glm::scale(scale)
+		* glm::translate(glm::vec3(dim.width, dim.height, dim.depth) * -0.5f);	// Origo to center of volume.
 	invModelMatrix = glm::inverse(modelMatrix);
-	// Makes camera look in the right direction from the right position
-	glm::mat4 view = glm::lookAt(light1.position, light1.position + glm::normalize(position - light1.position), up);
-	// Adds perspective to the scene
-	glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 1000.0f);
 
+	glm::mat4 view = glm::lookAt(light1.position, light1.position + glm::normalize(position - light1.position), up);
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 1000.0f);
 	light1.viewProjMatrix = projection * view;
 }
 

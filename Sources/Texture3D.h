@@ -32,7 +32,7 @@ public:
 	// Deletes a texture
 	void Delete();
 
-	unsigned char* getBytes() {
+	const unsigned char* getBytes() {
 		return bytes;
 	}
 

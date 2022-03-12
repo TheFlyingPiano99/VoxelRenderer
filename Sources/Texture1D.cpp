@@ -1,9 +1,8 @@
 #include "Texture1D.h"
 
-Texture1D::Texture1D(unsigned char* bytes, int widthImg, GLuint slot, GLenum format, GLenum pixelType)
+Texture1D::Texture1D(unsigned char* bytes, int width, GLuint slot, GLenum format, GLenum pixelType)
+	: bytes(bytes), width(width)
 {
-	// Stores the width, height, and the number of color channels of the image
-
 	// Generates an OpenGL texture object
 	glGenTextures(1, &ID);
 	// Assigns the texture to a Texture Unit
@@ -24,7 +23,7 @@ Texture1D::Texture1D(unsigned char* bytes, int widthImg, GLuint slot, GLenum for
 	// glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, flatColor);
 
 	// Assigns the image to the OpenGL Texture object
-	glTexImage1D(GL_TEXTURE_1D, 0, format, widthImg, 0, format, pixelType, bytes);
+	glTexImage1D(GL_TEXTURE_1D, 0, format, width, 0, format, pixelType, bytes);
 	// Generates MipMaps
 	glGenerateMipmap(GL_TEXTURE_1D);
 

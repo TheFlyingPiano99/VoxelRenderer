@@ -60,7 +60,8 @@ vec3 calculateLightLevel(vec3 currentPos, Light light) {
 	vec3 lightDir = normalize(toLightBeamEnd);
 	vec3 samplePos = currentPos + lightDir * delta;
 	float distanceTravelled = 0.0;
-	vec3 toLightSource = light.position - currentPos;
+	vec3 lightSourceModelPos = vec4(invModelMatrix * vec4(light1.position, 1.0)).xyz;
+	vec3 toLightSource = lightSourceModelPos - currentPos;
 	float disanceToLightSource = length(toLightSource);
 	float opacity = 1.0;
 	for (int i = 0; i < shadowSamples; i++) {
@@ -86,7 +87,6 @@ vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
 		float delta = rayLength / 100.0;
 		float opacity = 1.0;
 		vec3 gradient;
-		vec3 lightPos = vec4(invModelMatrix * vec4(light1.position, 1.0)).xyz;
 		while (distanceTravelled < rayLength) {
 			float intensity = trilinearInterpolation(currentPos, gradient);
 			vec4 colorAttenuation = texture(colorAttenuationTransfer, intensity);
@@ -99,7 +99,7 @@ vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
 		}
 	}
 	else {
-		return vec3(0, 0.1, 0.1);	// Background outside bounding cuboid
+		return vec3(1, 1, 1);	// Background outside bounding cuboid
 	}
 	return color;
 }

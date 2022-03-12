@@ -40,26 +40,241 @@ void BoundingGeometry::addCuboid(glm::vec3 scale, glm::vec3 translation) {
 	}
 }
 
-void BoundingGeometry::updateGeometry(Texture3D& voxels)
+void BoundingGeometry::calculateDivision(const Dimensions& dimensions, unsigned int& xDivision, unsigned int& yDivision, unsigned int& zDivision)
 {
-	Dimensions dimensions = voxels.getDimensions();
+	for (unsigned int i = 32; i >= 1; i--) {
+		if (dimensions.width % i == 0) {
+			xDivision = i;
+			break;
+		}
+	}
+	for (unsigned int i = 32; i >= 1; i--) {
+		if (dimensions.height % i == 0) {
+			yDivision = i;
+			break;
+		}
+	}
+	for (unsigned int i = 32; i >= 1; i--) {
+		if (dimensions.depth % i == 0) {
+			zDivision = i;
+			break;
+		}
+	}
+}
 
+void BoundingGeometry::createVertexGrid(const Dimensions& dimensions, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision)
+{
+	glm::vec3 blockSize = glm::vec3(dimensions.width, dimensions.height, dimensions.depth)
+		/ glm::vec3(xDivision, yDivision, zDivision);
+	for (int z = 0; z < zDivision + 1; z++) {
+		for (int y = 0; y < yDivision + 1; y++) {
+			for (int x = 0; x < xDivision + 1; x++) {
+				vertices.push_back(glm::vec3(x, y, z) * blockSize);
+			}
+		}
+	}
+}
+
+
+void BoundingGeometry::addPlusZSide(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision)
+{
+	//Lower polygon:
+	indices.push_back(indexVertices(x+1, y, z+1, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x, y, z+1, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x, y+1, z+1, xDivision, yDivision, zDivision));
+
+	//Upper polygon:
+	indices.push_back(indexVertices(x+1, y, z+1, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x, y+1, z+1, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y+1, z+1, xDivision, yDivision, zDivision));
+}
+
+void BoundingGeometry::addMinusZSide(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision)
+{
+	//Lower polygon:
+	indices.push_back(indexVertices(x, y, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y+1, z, xDivision, yDivision, zDivision));
+
+	//Upper polygon:
+	indices.push_back(indexVertices(x, y, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y+1, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x, y+1, z, xDivision, yDivision, zDivision));
+}
+
+void BoundingGeometry::addPlusYSide(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision)
+{
+	//Lower polygon:
+	indices.push_back(indexVertices(x, y+1, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y+1, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y+1, z+1, xDivision, yDivision, zDivision));
+
+	//Upper polygon:
+	indices.push_back(indexVertices(x, y+1, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y+1, z+1, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x, y+1, z+1, xDivision, yDivision, zDivision));
+}
+
+void BoundingGeometry::addMinusYSide(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision)
+{
+	//Lower polygon:
+	indices.push_back(indexVertices(x, y, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y, z+1, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y, z, xDivision, yDivision, zDivision));
+
+	//Upper polygon:
+	indices.push_back(indexVertices(x, y, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x, y, z+1, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y, z+1, xDivision, yDivision, zDivision));
+}
+
+void BoundingGeometry::addPlusXSide(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision)
+{
+	//Lower polygon:
+	indices.push_back(indexVertices(x+1, y, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y, z+1, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x + 1, y + 1, z + 1, xDivision, yDivision, zDivision));
+
+	//Upper polygon:
+	indices.push_back(indexVertices(x+1, y, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x + 1, y + 1, z + 1, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x+1, y+1, z, xDivision, yDivision, zDivision));
+}
+
+void BoundingGeometry::addMinusXSide(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision)
+{
+	//Lower polygon:
+	indices.push_back(indexVertices(x, y, z+1, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x, y, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x, y+1, z, xDivision, yDivision, zDivision));
+
+	//Upper polygon:
+	indices.push_back(indexVertices(x, y, z+1, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x, y+1, z, xDivision, yDivision, zDivision));
+	indices.push_back(indexVertices(x, y+1, z+1, xDivision, yDivision, zDivision));
+}
+
+unsigned int BoundingGeometry::indexVertices(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision)
+{
+	return z * (yDivision + 1) * (xDivision + 1) + y * (xDivision + 1) + x;
+}
+
+unsigned int BoundingGeometry::indexDivisionSized(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision)
+{
+
+	return z * yDivision * xDivision + y * xDivision + x;
+}
+
+void BoundingGeometry::calculateFilled(const Dimensions& dimensions,
+	const unsigned int& xDivision,
+	const unsigned int& yDivision,
+	const unsigned int& zDivision,
+	bool* isFilled,
+	Texture3D& voxels,
+	Texture1D& transferFunction)
+{
+	std::vector<float> averageOpacity = std::vector<float>(xDivision * yDivision * zDivision);
+	for (int i = 0; i < xDivision * yDivision * zDivision; i++) {
+		averageOpacity[i] = 0.0f;
+	}
+	int xBlockSize = dimensions.width / xDivision;
+	int yBlockSize = dimensions.height / yDivision;
+	int zBlockSize = dimensions.depth / zDivision;
+	int voxelsPerBlock = xBlockSize * yBlockSize * zBlockSize;
+	for (int z = 0; z < dimensions.depth; z++) {
+		for (int y = 0; y < dimensions.height; y++) {
+			for (int x = 0; x < dimensions.width; x++) {
+				int intensity = (int)(voxels.getBytes()[
+					z * dimensions.height * dimensions.width * dimensions.bytesPerVoxel
+						+ y * dimensions.width * dimensions.bytesPerVoxel
+						+ x * dimensions.bytesPerVoxel]);
+				float increment;
+				if (0 < intensity && intensity < 3) {
+					std::cout << "small intesity\n";
+					increment = 0.0f;
+				}
+				unsigned char c = transferFunction.getBytes()[intensity * 4 + 3];
+				increment = c / 255.0f;
+
+				int idx = indexDivisionSized((x / xBlockSize), (y / yBlockSize), (z / zBlockSize), xDivision, yDivision, zDivision);
+				averageOpacity[idx] += increment / (float)voxelsPerBlock;
+
+			}
+		}
+	}
+	for (int i = 0; i < xDivision * yDivision * zDivision; i++) {
+
+		float ao = averageOpacity[i];
+		//std::cout << i << ".: ao = " << ao << std::endl;
+		isFilled[i] = (threshold < ao);
+	}
+}
+
+void BoundingGeometry::createIndices(const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision, bool* isFilled)
+{
+	for (int z = 0; z < zDivision; z++) {
+		for (int y = 0; y < yDivision; y++) {
+			for (int x = 0; x < xDivision; x++) {
+				if (isFilled[z * yDivision * xDivision + y * xDivision + x]) {
+					if (z < zDivision - 1 && !isFilled[(z + 1) * yDivision * xDivision + y * xDivision + x]
+						|| z == zDivision - 1) {
+						addPlusZSide(x, y, z, xDivision, yDivision,zDivision);
+					}
+					if (z > 0 && !isFilled[(z - 1) * yDivision * xDivision + y * xDivision + x]
+						|| z == 0) {
+						addMinusZSide(x, y, z, xDivision, yDivision, zDivision);
+					}
+					if (y < yDivision - 1 && !isFilled[z * yDivision * xDivision + (y + 1) * xDivision + x]
+						|| y == yDivision - 1) {
+						addPlusYSide(x, y, z, xDivision, yDivision, zDivision);
+					}
+					if (y > 0 && !isFilled[z * yDivision * xDivision + (y - 1) * xDivision + x]
+						|| y == 0) {
+						addMinusYSide(x, y, z, xDivision, yDivision, zDivision);
+					}
+					if (x < xDivision - 1 && !isFilled[z * yDivision * xDivision + y * xDivision + x + 1]
+						|| x == xDivision - 1) {
+						addPlusXSide(x, y, z, xDivision, yDivision, zDivision);
+					}
+					if (x > 0 && !isFilled[z * yDivision * xDivision + y * xDivision + x - 1]
+						|| x == 0) {
+						addMinusXSide(x, y, z, xDivision, yDivision, zDivision);
+					}
+				}
+			}
+		}
+	};
+}
+
+
+void BoundingGeometry::updateGeometry(Texture3D& voxels, Texture1D& transferFunction, float threshold)
+{
+	this->threshold = threshold;
 	vertices.clear();
 	indices.clear();
 
-	addCuboid(glm::vec3(dimensions.width, dimensions.height, dimensions.depth), glm::vec3(0.0f));
+	Dimensions dimensions = voxels.getDimensions();
+	unsigned int xDivision, yDivision, zDivision;
+	calculateDivision(dimensions, xDivision, yDivision, zDivision);
+	bool* isFilled = new bool[xDivision * yDivision * zDivision];
 
-	//---------------------------------------------------------------------------------
+	calculateFilled(dimensions,
+		xDivision,
+		yDivision,
+		zDivision,
+		isFilled,
+		voxels,
+		transferFunction);
+
+	createVertexGrid(dimensions, xDivision, yDivision, zDivision);
+	createIndices(xDivision, yDivision, zDivision, isFilled);
+
+	delete[] isFilled;
 
 	VAO.Bind();
-	// Generates Vertex Buffer Object and links it to vertices
-
 	VBO VBO(vertices);
-	// Generates Element Buffer Object and links it to indices
 	EBO EBO(indices);
-	// Links VBO attributes such as coordinates and colors to VAO
 	VAO.LinkAttrib(VBO, 0, 3, GL_FLOAT, sizeof(glm::vec3), (void*)0);
-	// Unbind all to prevent accidentally modifying them
 	VAO.Unbind();
 }
 

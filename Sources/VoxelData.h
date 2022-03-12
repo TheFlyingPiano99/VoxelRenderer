@@ -23,6 +23,7 @@ class VoxelData
 	glm::vec3 position;
 	glm::vec3 normal;
 	glm::vec3 up;
+	glm::vec3 eulerAngles;
 
 	glm::mat4 modelMatrix;
 	glm::mat4 invModelMatrix;
@@ -41,6 +42,7 @@ class VoxelData
 	static unsigned char* defaultTransferFunction(int resolution);
 	static unsigned char* skinTransferFunction(int resolution);
 	static unsigned char* brainOnlyTransferFunction(int resolution);
+	static unsigned char* solidTransferFunction(int resolution);
 
 	bool readDimensions(const char* path, std::string& name, Dimensions& dimensions);
 	void initFBOs(unsigned int contextWidth, unsigned int contextHeight);
