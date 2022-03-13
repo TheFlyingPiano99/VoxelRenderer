@@ -22,8 +22,8 @@ public:
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);
 	glm::mat4 invCameraMatrix = glm::mat4(1.0f);
 	float FOVdeg = 45.0f;
-	float nearPlane = 1.0f;
-	float farPlane = 1000.0f;
+	float nearPlane = 2.0f;
+	float farPlane = 2000.0f;
 
 	// Prevents the camera from jumping around when first clicking left click
 	bool firstClick = true;

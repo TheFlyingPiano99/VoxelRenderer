@@ -1,12 +1,23 @@
 #include "Texture3D.h"
 #include <iomanip>
-#include <vector>
 
-Texture3D::Texture3D(const char* directory, const Dimensions dimensions, GLuint slot, GLenum format, GLenum pixelType)
-	: dimensions(dimensions)
+Texture3D::Texture3D(const char* directory, const Dimensions dimensions, GLuint slot, GLenum format)
+	: dimensions(dimensions), maxValue(std::pow(2, dimensions.bytesPerVoxel * 8) - 1)
 {
+	bool swapBytes = true;
+	unsigned int headerSize = 0;
+	GLenum pixelType;
+	if (dimensions.bytesPerVoxel == 1) {
+		pixelType = GL_UNSIGNED_BYTE;
+	}
+	else if (dimensions.bytesPerVoxel == 2) {
+		pixelType = GL_HALF_FLOAT;
+	}
+	else if (dimensions.bytesPerVoxel == 4) {
+		pixelType = GL_FLOAT;
+	}
 
-	bytes = new unsigned char[dimensions.width * dimensions.height * dimensions.depth * dimensions.bytesPerVoxel];
+	bytes = std::vector<char>(dimensions.width * dimensions.height * dimensions.depth * dimensions.bytesPerVoxel);
 
 	// Flips the image so it appears right side up
 	//stbi_set_flip_vertically_on_load(false);
@@ -18,10 +29,22 @@ Texture3D::Texture3D(const char* directory, const Dimensions dimensions, GLuint 
 		std::string path = pathss.str();
 		FILE* file;
 		errno_t err;
-		//unsigned char* imageBytes = stbi_load(path.c_str(), &widthImg, &heightImg, &numColCh, 0);
 		if (err = fopen_s(&file, path.c_str(), "rb") == 0) {
-			int bytesCount = fread(bytes + z * dimensions.width * dimensions.height * dimensions.bytesPerVoxel, sizeof(char), dimensions.width * dimensions.height * dimensions.bytesPerVoxel, file);
+			unsigned char* header = new unsigned char[headerSize];
+			int headerByteCount = fread(header, sizeof(char), headerSize, file);
+			int bytesCount = fread(&bytes[0] + z * dimensions.width * dimensions.height * dimensions.bytesPerVoxel, sizeof(char), dimensions.width * dimensions.height * dimensions.bytesPerVoxel, file);
 			fclose(file);
+			delete[] header;
+		}
+	}
+
+	if (swapBytes) {
+		for (int i = 0; i < dimensions.width * dimensions.height * dimensions.depth; i++) {
+			for (int j = 0; j < dimensions.bytesPerVoxel / 2; j++) {
+				char temp = bytes[i * dimensions.bytesPerVoxel + j];
+				bytes[i * dimensions.bytesPerVoxel + j] = bytes[i * dimensions.bytesPerVoxel + dimensions.bytesPerVoxel - 1 - j];
+				bytes[i * dimensions.bytesPerVoxel + dimensions.bytesPerVoxel - 1 - j] = temp;
+			}
 		}
 	}
 
@@ -40,17 +63,11 @@ Texture3D::Texture3D(const char* directory, const Dimensions dimensions, GLuint 
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	// Extra lines in case you choose to use GL_CLAMP_TO_BORDER
-	// float flatColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
-	// glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, flatColor);
-
 	// Assigns the image to the OpenGL Texture object
 	//TODO
-	glTexImage3D(GL_TEXTURE_3D, 0, format, dimensions.width, dimensions.height, dimensions.depth, 0, format, pixelType, bytes);
+	glTexImage3D(GL_TEXTURE_3D, 0, format, dimensions.width, dimensions.height, dimensions.depth, 0, format, pixelType, &bytes[0]);
 	// Generates MipMaps
 	glGenerateMipmap(GL_TEXTURE_3D);
-
-	// Deletes the image data as it is already in the OpenGL Texture object
 
 	// Unbinds the OpenGL Texture object so that it can't accidentally be modified
 	glBindTexture(GL_TEXTURE_3D, 0);
@@ -58,9 +75,7 @@ Texture3D::Texture3D(const char* directory, const Dimensions dimensions, GLuint 
 
 Texture3D::~Texture3D()
 {
-	if (bytes != nullptr) {
-		delete[] bytes;
-	}
+	this->Delete();
 }
 
 void Texture3D::texUnit(Shader& shader, const char* uniform, GLuint unit)
@@ -89,4 +104,47 @@ void Texture3D::Unbind()
 void Texture3D::Delete()
 {
 	glDeleteTextures(1, &ID);
+}
+
+const glm::vec4 Texture3D::resampleGradientAndDensity(glm::ivec3 position)
+{
+	float intensity = operator()(position);
+	glm::vec3 stepSize = glm::vec3(1.0);
+	glm::vec3 sample0, sample1;
+	sample0.x = operator()(glm::ivec3(position.x - stepSize.x, position.y, position.z));
+	sample1.x = operator()(glm::ivec3(position.x + stepSize.x, position.y, position.z));
+	sample0.y = operator()(glm::ivec3(position.x, position.y - stepSize.y, position.z));
+	sample1.y = operator()(glm::ivec3(position.x, position.y + stepSize.y, position.z));
+	sample0.z = operator()(glm::ivec3(position.x, position.y, position.z - stepSize.z));
+	sample1.z = operator()(glm::ivec3(position.x, position.y, position.z + stepSize.z));
+	glm::vec3 scaledPosition = glm::vec3(position) - glm::vec3(0.5f);
+	glm::vec3 fraction = scaledPosition - glm::floor(scaledPosition);
+	glm::vec3 correctionPolynomial = (fraction * (fraction - glm::vec3(1.0f))) / glm::vec3(2.0f);
+	intensity += glm::dot((sample0 - intensity * 2.0f + sample1),
+		correctionPolynomial);
+	return glm::vec4(glm::normalize(sample1 - sample0), intensity);
+}
+
+const float Texture3D::operator()(glm::ivec3 position)
+{
+	if (position.x >= dimensions.width
+		|| position.x < 0
+		|| position.y >= dimensions.height
+		|| position.y < 0
+		|| position.z >= dimensions.depth
+		|| position.z < 0) {
+		return 0.0f;	// Prevent access violation error.
+	}
+	int idx = position.z * dimensions.height * dimensions.width * dimensions.bytesPerVoxel + position.y * dimensions.width * dimensions.bytesPerVoxel + position.x * dimensions.bytesPerVoxel;
+	float result;
+	if (dimensions.bytesPerVoxel == 1) {
+		result = (float)bytes[idx] / (float)maxValue;
+	}
+	else if (dimensions.bytesPerVoxel == 2) {
+		char a = bytes[idx];
+		char b = bytes[idx + 1];
+		short c = (((short)a) << 8) | b;
+		result = (float)c / (float)maxValue;
+	}
+	return result;
 }

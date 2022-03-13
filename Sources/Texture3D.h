@@ -3,6 +3,8 @@
 
 #include<glad/glad.h>
 #include<stb/stb_image.h>
+#include<glm/glm.hpp>
+#include <vector>
 
 #include"shaderClass.h"
 
@@ -18,9 +20,10 @@ public:
 	GLuint ID;
 	GLuint unit;
 	float shininess = 16.0f;	// Should be extracted to Material
-	unsigned char* bytes = nullptr;
+	std::vector<char> bytes;
 	const Dimensions dimensions;
-	Texture3D(const char* directory, const Dimensions dimensions, GLuint slot, GLenum format, GLenum pixelType);
+	int maxValue;
+	Texture3D(const char* directory, const Dimensions dimensions, GLuint slot, GLenum format);
 	~Texture3D();
 
 	// Assigns a texture unit to a texture
@@ -32,12 +35,13 @@ public:
 	// Deletes a texture
 	void Delete();
 
-	const unsigned char* getBytes() {
-		return bytes;
-	}
-
 	const Dimensions& getDimensions() {
 		return dimensions;
 	}
+
+	const float operator()(glm::ivec3 position);
+
+	const glm::vec4 resampleGradientAndDensity(glm::ivec3 position);
+
 };
 #endif

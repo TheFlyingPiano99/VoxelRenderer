@@ -3,7 +3,7 @@
 #include "Camera.h"
 #include "Texture3D.h"
 #include "Light.h"
-#include "Texture1D.h"
+#include "Texture2D.h"
 
 class BoundingGeometry
 {
@@ -23,7 +23,7 @@ class BoundingGeometry
 		const unsigned int& zDivision,
 		bool* isFilled,
 		Texture3D& voxels,
-		Texture1D& transferFunction);
+		Texture2D& transferFunction);
 	void createIndices(const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision, bool* isFilled);
 
 	void addPlusZSide(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision);
@@ -35,15 +35,16 @@ class BoundingGeometry
 
 	unsigned int indexVertices(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision);
 	unsigned int indexDivisionSized(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision);
+
 public:
 	BoundingGeometry(Shader* _shader)
-		: shader(_shader), modelMatrix(1.0f) {
+		: shader(_shader), modelMatrix(1.0f), threshold(0.01f) {
 	}
 	~BoundingGeometry() {
 		VAO.Delete();
 	}
 
-	void updateGeometry(Texture3D& voxels, Texture1D& transferFunction, float threshold);
+	void updateGeometry(Texture3D& voxels, Texture2D& transferFunction, float threshold);
 
 	void draw(Camera& camera, Light& light, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, unsigned int enterFBO, unsigned int exitFBO, unsigned int lightFBO);
 };

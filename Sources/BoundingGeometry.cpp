@@ -171,7 +171,7 @@ void BoundingGeometry::calculateFilled(const Dimensions& dimensions,
 	const unsigned int& zDivision,
 	bool* isFilled,
 	Texture3D& voxels,
-	Texture1D& transferFunction)
+	Texture2D& transferFunction)
 {
 	std::vector<float> averageOpacity = std::vector<float>(xDivision * yDivision * zDivision);
 	for (int i = 0; i < xDivision * yDivision * zDivision; i++) {
@@ -184,23 +184,17 @@ void BoundingGeometry::calculateFilled(const Dimensions& dimensions,
 	for (int z = 0; z < dimensions.depth; z++) {
 		for (int y = 0; y < dimensions.height; y++) {
 			for (int x = 0; x < dimensions.width; x++) {
-				int intensity = (int)(voxels.getBytes()[
-					z * dimensions.height * dimensions.width * dimensions.bytesPerVoxel
-						+ y * dimensions.width * dimensions.bytesPerVoxel
-						+ x * dimensions.bytesPerVoxel]);
-				float increment = (float)transferFunction.getBytes()[intensity * 4 + 3] / 255.0f;
-
-				int idx = indexDivisionSized((x / xBlockSize), (y / yBlockSize), (z / zBlockSize), xDivision, yDivision, zDivision);
-				averageOpacity[idx] += increment / (float)voxelsPerBlock;
-
+				glm::vec4 gradientIntensity = voxels.resampleGradientAndDensity(glm::ivec3(x, y, z));
+				float gradientLength = glm::length(glm::vec3(gradientIntensity.x, gradientIntensity.y, gradientIntensity.z));
+				float intensity = gradientIntensity.w;
+				float opacity = transferFunction(glm::vec2(intensity, gradientLength)).w;
+					averageOpacity[indexDivisionSized((x / xBlockSize), (y / yBlockSize), (z / zBlockSize), xDivision, yDivision, zDivision)]
+					+= opacity / (float)voxelsPerBlock;
 			}
 		}
 	}
 	for (int i = 0; i < xDivision * yDivision * zDivision; i++) {
-
-		float ao = averageOpacity[i];
-		//std::cout << i << ".: ao = " << ao << std::endl;
-		isFilled[i] = (threshold < ao);
+		isFilled[i] = (threshold <= averageOpacity[i]);
 	}
 }
 
@@ -241,7 +235,7 @@ void BoundingGeometry::createIndices(const unsigned int& xDivision, const unsign
 }
 
 
-void BoundingGeometry::updateGeometry(Texture3D& voxels, Texture1D& transferFunction, float threshold)
+void BoundingGeometry::updateGeometry(Texture3D& voxels, Texture2D& transferFunction, float threshold)
 {
 	this->threshold = threshold;
 	vertices.clear();

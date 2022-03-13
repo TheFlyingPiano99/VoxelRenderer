@@ -12,7 +12,7 @@ class VoxelData
 {
 	Shader* shader = nullptr;	// Don't delete!
 	Texture3D* voxels = nullptr;
-	Texture1D* transferFunction = nullptr;
+	Texture2D* transferFunction = nullptr;
 	VAO quadVAO;
 	unsigned int enterFBO, exitFBO, lightFBO;
 	unsigned int enterTexture, exitTexture, lightTexture;
@@ -30,7 +30,6 @@ class VoxelData
 
 	float maxIntensity;
 	float maxAttenuation;
-	glm::vec3 resolution;
 	Plane plane;
 	float exposure, gamma;
 	Light light1;
@@ -39,10 +38,11 @@ class VoxelData
 	unsigned int shadowSamples;
 
 	void exportData();
-	static unsigned char* defaultTransferFunction(int resolution);
+	std::vector<glm::vec4> defaultTransferFunction(glm::ivec2 dimensions);
+	std::vector<glm::vec4> spatialTransferFunction(glm::ivec2 dimensions);
 	static unsigned char* skinTransferFunction(int resolution);
 	static unsigned char* brainOnlyTransferFunction(int resolution);
-	static unsigned char* solidTransferFunction(int resolution);
+	std::vector<glm::vec4> solidTransferFunction(glm::ivec2 dimensions);
 
 	bool readDimensions(const char* path, std::string& name, Dimensions& dimensions);
 	void initFBOs(unsigned int contextWidth, unsigned int contextHeight);
