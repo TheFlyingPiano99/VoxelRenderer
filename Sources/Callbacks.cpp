@@ -30,6 +30,7 @@ void Callbacks::onWindowInit(GLFWwindow* window)
 	ControlActionManager::getInstance()->registerDefault();
 
 	Scene::getInstance()->init();
+	GUI::getInstance()->initGUI(window);
 }
 
 

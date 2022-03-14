@@ -45,8 +45,6 @@ int main()
 		return -1;
 	}
 
-	GUI::getInstance()->initGUI(window);
-
 	//Load GLAD so it configures OpenGL
 	gladLoadGL();
 

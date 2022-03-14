@@ -14,7 +14,8 @@ class TransferFunction
 	glm::mat4 invModelMatrix;
 	Texture2D* texture = nullptr;
 	VAO* quadVAO;
-
+	float displayExposure = 1.0f;
+	float displayGamma = 1.0f;
 	glm::vec4 nullVector = glm::vec4(0.0f);
 
 public:
@@ -27,6 +28,9 @@ public:
 	}
 
 	void crop(glm::vec2 min, glm::vec2 max);
+	void floodFill(glm::vec2 startPos, glm::vec4 color, float threshold);
+	void blur(int kernelSize);
+	void normalize();
 	void draw();
 	void Bind();
 	void Unbind();
@@ -63,5 +67,14 @@ public:
 	void operator=(TransferFunction& transferFunction);
 
 	void setCamSpacePosition(glm::vec2 camPos);
+
+	float& getExposure() {
+		return displayExposure;
+	}
+
+	float& getGamma() {
+		return displayGamma;
+	}
+
 };
 

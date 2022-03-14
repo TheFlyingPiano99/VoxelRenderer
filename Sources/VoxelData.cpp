@@ -143,8 +143,9 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, Shader* _transfer
 	up(0.0f, 1.0f, 0.0f),
 	eulerAngles(0.0f, 0.0f, 0.0f),
 	shadowSamples(3),
-	treshold(0.006),
-	quadVAO(quadVAO)
+	quadVAO(quadVAO),
+	boundingGeometryTreshold(0.006f),
+	transferFloodFillTreshold(4.0f)
 	{
 	// Stores the width, height, and the number of color channels of the image
 	Dimensions dimensions;
@@ -158,9 +159,12 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, Shader* _transfer
 
 	glm::ivec2 transferDimensions = glm::ivec2(256, 64);
 	refereceSpatialTransferFunction.spatialTransferFunction(transferDimensions, *voxels);
+	refereceSpatialTransferFunction.blur(3);
+	transferFunction.setCamSpacePosition(glm::vec2(0.5f, -0.8f));
+	refereceSpatialTransferFunction.setCamSpacePosition(glm::vec2(-0.5f, -0.8f));
 	transferFunction = refereceSpatialTransferFunction;
 	initFBOs(contextWidth, contextHeight);
-	boundingGeometry.updateGeometry(*voxels, transferFunction, treshold);
+	boundingGeometry.updateGeometry(*voxels, transferFunction, boundingGeometryTreshold);
 
 	light1.position = glm::vec3(300, 50, 300);
 	light1.intensity = glm::vec3(110000, 110000, 90000);
@@ -224,6 +228,7 @@ void VoxelData::draw(Camera& camera) {
 	voxels->Unbind();
 	transferFunction.Unbind();
 	transferFunction.draw();
+	refereceSpatialTransferFunction.draw();
 }
 
 
@@ -265,10 +270,30 @@ void VoxelData::selectTransferFunctionRegion(double xCamPos, double yCamPos)
 	glm::vec2 texCoords = glm::vec2(modelPos.x / 2.0f + 0.5f, 0.5f + modelPos.y / 2.0f);
 	if (texCoords.x >= 0.0f && texCoords.x <= 1.0f
 		&& texCoords.y >= 0.0f && texCoords.y <= 1.0f) {
-		transferFunction.crop(texCoords - glm::vec2(0.1f, 0.5f), texCoords + glm::vec2(0.1f, 0.5f));
-		boundingGeometry.updateGeometry(*voxels, transferFunction, treshold);
+		transferFunction = refereceSpatialTransferFunction;
+		if (std::string(currentTransferRegionSelectMode) == std::string(transferRegionSelectModes[0])) {
+			transferFunction.floodFill(texCoords, glm::vec4(1, 1, 1, 1), transferFloodFillTreshold);
+			transferFunction.blur(5);
+		}
+		else if (std::string(currentTransferRegionSelectMode) == std::string(transferRegionSelectModes[1])) {
+			transferFunction.crop(texCoords - glm::vec2(0.2, 0.3), texCoords + glm::vec2(0.2, 0.3));
+		}
+		boundingGeometry.updateGeometry(*voxels, transferFunction, boundingGeometryTreshold);
+		return;
 	}
-	else {
-		std::cout << "Out of box: " << modelPos.x << ", " << modelPos.y << std::endl;
+
+	modelPos = refereceSpatialTransferFunction.getInvModelMatrix() * camPos;
+	texCoords = glm::vec2(modelPos.x / 2.0f + 0.5f, 0.5f + modelPos.y / 2.0f);
+	if (texCoords.x >= 0.0f && texCoords.x <= 1.0f
+		&& texCoords.y >= 0.0f && texCoords.y <= 1.0f) {
+		transferFunction = refereceSpatialTransferFunction;
+		if (std::string(currentTransferRegionSelectMode) == std::string(transferRegionSelectModes[0])) {
+			transferFunction.floodFill(texCoords, glm::vec4(1, 1, 1, 1), transferFloodFillTreshold);
+			transferFunction.blur(5);
+		}
+		else if (std::string(currentTransferRegionSelectMode) == std::string(transferRegionSelectModes[1])) {
+			transferFunction.crop(texCoords - glm::vec2(0.2, 0.3), texCoords + glm::vec2(0.2, 0.3));
+		}
+		boundingGeometry.updateGeometry(*voxels, transferFunction, boundingGeometryTreshold);
 	}
 }

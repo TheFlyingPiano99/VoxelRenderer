@@ -37,9 +37,13 @@ class VoxelData
 	float exposure, gamma;
 	Light light1;
 	std::string name;
-	float treshold;
+	float boundingGeometryTreshold;
+	float transferFloodFillTreshold;
 
 	unsigned int shadowSamples;
+
+	const char* transferRegionSelectModes[2] = { "Flood fill", "General area" };
+	const char* currentTransferRegionSelectMode = "Flood fill";
 
 	void exportData();
 
@@ -63,5 +67,42 @@ public :
 	std::string getName() {
 		return name;
 	}
+
+	float& getExposure() {
+		return exposure;
+	}
+
+	float& getGamma() {
+		return gamma;
+	}
+
+	float& getBoundingGeometryThreshold() {
+		return boundingGeometryTreshold;
+	}
+
+	float& getTransferFloodFillThreshold() {
+		return transferFloodFillTreshold;
+	}
+
+	const char** getTransferRegionSelectModes() {
+		return transferRegionSelectModes;
+	}
+
+	const char* getCurrentTransferRegionSelectModes() {
+		return currentTransferRegionSelectMode;
+	}
+
+	void setCurrentTransferRegionSelectModes(const char* str) {
+		currentTransferRegionSelectMode = str;
+	}
+
+	float& getReferenceTransferFunctionExposure() {
+		return refereceSpatialTransferFunction.getExposure();
+	}
+
+	float& getReferenceTransferFunctionGamma() {
+		return refereceSpatialTransferFunction.getGamma();
+	}
+
 };
 
