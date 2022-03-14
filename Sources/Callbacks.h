@@ -12,5 +12,7 @@ namespace Callbacks
 	void onKey(GLFWwindow* window, int key, int scancode, int action, int mods);
 	void onWindowClose(GLFWwindow* window);
 	void onMouseMove(GLFWwindow* window, double xpos, double ypos);
+	void onMouseScroll(GLFWwindow* window, double xoffset, double yoffset);
+	void onMouseClick(GLFWwindow* window, int button, int action, int mods);
 };
 

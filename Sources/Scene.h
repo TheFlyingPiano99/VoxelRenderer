@@ -22,6 +22,7 @@ class Scene
 	std::vector<Shader*> shaders;
 	PostprocessUnit postprocessUnit;
 
+	VAO quadVAO;
 	VoxelData* voxels = nullptr;
 
 	bool pause = false;
@@ -34,6 +35,7 @@ class Scene
 	}
 
 
+	void initQuad();
 	void initCamera();
 	void initMeshesShadersObjects();
 

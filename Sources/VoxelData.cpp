@@ -1,5 +1,8 @@
 #include "VoxelData.h"
 #include <vector>
+#include<glm/gtc/type_ptr.hpp>
+#include<glm/gtc/matrix_transform.hpp>
+#include<glm/gtx/rotate_vector.hpp>
 
 
 void VoxelData::exportData()
@@ -16,172 +19,6 @@ void VoxelData::exportData()
 	glUniform1f(glGetUniformLocation(shader->ID, "gamma"), gamma);
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
 	glUniform1ui(glGetUniformLocation(shader->ID, "shadowSamples"), shadowSamples);
-}
-
-unsigned char* VoxelData::skinTransferFunction(int resolution)
-{
-	unsigned char* bytes = new unsigned char[resolution * 4];
-	for (int i = 0; i < resolution; i++) {
-		if (i < 2 / 100.0 * resolution) {
-			bytes[i * 4] = 0;
-			bytes[i * 4 + 1] = 0;
-			bytes[i * 4 + 2] = 0;
-			bytes[i * 4 + 3] = 0;
-		}
-		else if (i < 3 / 100.0 * resolution) {
-			bytes[i * 4] = 5;
-			bytes[i * 4 + 1] = 2;
-			bytes[i * 4 + 2] = 0;
-			bytes[i * 4 + 3] = 5;
-		}
-		else if (i < 4 / 100.0 * resolution) {
-			bytes[i * 4] = 2;
-			bytes[i * 4 + 1] = 10;
-			bytes[i * 4 + 2] = 0;
-			bytes[i * 4 + 3] = 5;
-		}
-		else if (i < 5 / 100.0 * resolution) {
-			bytes[i * 4] = 120;
-			bytes[i * 4 + 1] = 92;
-			bytes[i * 4 + 2] = 80;
-			bytes[i * 4 + 3] = 5;
-		}
-		else if (i < 10 / 100.0 * resolution) {
-			bytes[i * 4] = 135;
-			bytes[i * 4 + 1] = 103;
-			bytes[i * 4 + 2] = 90;
-			bytes[i * 4 + 3] = 100;
-		}
-		else if (i < 20 / 100.0 * resolution) {
-			bytes[i * 4] = 165;
-			bytes[i * 4 + 1] = 57;
-			bytes[i * 4 + 2] = 0;
-			bytes[i * 4 + 3] = 100;
-		}
-		else if (i < 30 / 100.0 * resolution) {
-			bytes[i * 4] = 210;
-			bytes[i * 4 + 1] = 161;
-			bytes[i * 4 + 2] = 141;
-			bytes[i * 4 + 3] = 100;
-		}
-		else if (i < 40 / 100.0 * resolution) {
-			bytes[i * 4] = 225;
-			bytes[i * 4 + 1] = 172;
-			bytes[i * 4 + 2] = 150;
-			bytes[i * 4 + 3] = 150;
-		}
-		else if (i < 50 / 100.0 * resolution) {
-			bytes[i * 4] = 240;
-			bytes[i * 4 + 1] = 184;
-			bytes[i * 4 + 2] = 160;
-			bytes[i * 4 + 3] = 200;
-		}
-		else if (i < 80 / 100.0 * resolution) {
-			bytes[i * 4] = 100;
-			bytes[i * 4 + 1] = 100;
-			bytes[i * 4 + 2] = 100;
-			bytes[i * 4 + 3] = 250;
-		}
-		else {
-			bytes[i * 4] = 0;
-			bytes[i * 4 + 1] = 0;
-			bytes[i * 4 + 2] = 0;
-			bytes[i * 4 + 3] = 0;
-		}
-	}
-	return bytes;
-}
-
-std::vector<glm::vec4> VoxelData::defaultTransferFunction(glm::ivec2 dimensions)
-{
-	std::vector<glm::vec4> bytes = std::vector<glm::vec4>(dimensions.x * dimensions.y);
-	for (int y = 0; y < dimensions.y; y++) {
-		for (int x = 0; x < dimensions.x; x++) {
-			if (x > 3 && x < 250) {
-				bytes[y * dimensions.x + x].x = x / (float)dimensions.x * y / (float)dimensions.y;
-				bytes[y * dimensions.x + x].y = x / (float)dimensions.x * x / (float)dimensions.x;
-				bytes[y * dimensions.x + x].z = x / (float)dimensions.x * x / (float)dimensions.x;
-				bytes[y * dimensions.x + x].w = (std::pow((x - 3), 0.5) <= (float)dimensions.x) ? std::pow((x - 3), 0.5) / (float)dimensions.x : 1.0f;
-			}
-			else {
-				bytes[y * dimensions.x + x].x = 0.0f;
-				bytes[y * dimensions.x + x].y = 0.0f;
-				bytes[y * dimensions.x + x].z = 0.0f;
-				bytes[y * dimensions.x + x].w = 0.0f;
-			}
-		}
-	}
-	return bytes;
-}
-
-std::vector<glm::vec4> VoxelData::spatialTransferFunction(glm::ivec2 dimensions) {
-	std::vector<glm::vec4> bytes = std::vector<glm::vec4>(dimensions.x * dimensions.y);
-	for (int i = 0; i < dimensions.x * dimensions.y; i++) {
-		bytes[i] = glm::vec4(0.0f);
-	}
-	int minX = 0.1f * (float)dimensions.x;
-	int maxX = 0.6f * (float)dimensions.x;
-	int minY = 0.0f * (float)dimensions.y;
-	int maxY = 0.98f * (float)dimensions.y;
-	Dimensions voxelDim = voxels->getDimensions();
-	float divider = voxelDim.width * voxelDim.height * voxelDim.depth * 0.01f;
-	for (int z = 0; z < voxelDim.depth; z++) {
-		for (int y = 0; y < voxelDim.height; y++) {
-			for (int x = 0; x < voxelDim.width; x++) {
-				glm::vec4 gradientIntensity = voxels->resampleGradientAndDensity(glm::ivec3(x, y, z));
-				int xb = gradientIntensity.w * (dimensions.x - 1);
-				int yb = glm::length(glm::vec3(gradientIntensity.x, gradientIntensity.y, gradientIntensity.z)) * (dimensions.y - 1);
-				if (xb >= minX && xb <= maxX && yb >= minY && yb <= maxY) {
-					bytes[yb * dimensions.x + xb] += glm::vec4(x, y, z, 1.0f) / glm::vec4(voxelDim.width, voxelDim.height, voxelDim.depth, 1);
-				}
-			}
-		}
-	}
-	return bytes;
-
-}
-
-
-unsigned char* VoxelData::brainOnlyTransferFunction(int resolution)
-{
-	unsigned char* bytes = new unsigned char[resolution * 4];
-	for (int i = 0; i < resolution; i++) {
-		if (i > 0.4 * resolution && i < 0.5 * resolution) {
-			bytes[i * 4] = 200;
-			bytes[i * 4 + 1] = 200;
-			bytes[i * 4 + 2] = 150;
-			bytes[i * 4 + 3] = 100;
-
-		}
-		else if (i > 0.5 * resolution && i < 1.0 * resolution) {
-			bytes[i * 4] = 200;
-			bytes[i * 4 + 1] = 200;
-			bytes[i * 4 + 2] = 200;
-			bytes[i * 4 + 3] = 200;
-
-		}
-		else {
-			bytes[i * 4] = 0;
-			bytes[i * 4 + 1] = 0;
-			bytes[i * 4 + 2] = 0;
-			bytes[i * 4 + 3] = 0;
-		}
-	}
-	return bytes;
-}
-
-std::vector<glm::vec4> VoxelData::solidTransferFunction(glm::ivec2 dimensions)
-{
-	std::vector<glm::vec4> bytes = std::vector<glm::vec4>(dimensions.x * dimensions.y);
-	for (int y = 0; y < dimensions.y; y++) {
-		for (int x = 0; x < dimensions.x; x++) {
-			bytes[y * dimensions.x + x].x = x / (float)dimensions.x * 0.5f;
-			bytes[y * dimensions.x + x].y = x / (float)dimensions.x * 0.5f;
-			bytes[y * dimensions.x + x].z = x / (float)dimensions.x * 0.5f;
-			bytes[y * dimensions.x + x].w = x / (float)dimensions.x ;
-		}
-	}
-	return bytes;
 }
 
 bool VoxelData::readDimensions(const char* path, std::string& name, Dimensions& dimensions)
@@ -289,46 +126,25 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
 }
 
-void VoxelData::initQuad()
-{
-	float quadVertices[] =
-	{
-		//Coord	//texCoords
-		1.0f, -1.0f,  1.0f,  0.0f,
-	   -1.0f, -1.0f,  0.0f,  0.0f,
-	   -1.0f,  1.0f,  0.0f,  1.0f,
 
-		1.0f,  1.0f,  1.0f,  1.0f,
-		1.0f, -1.0f,  1.0f,  0.0f,
-	   -1.0f,  1.0f,  0.0f,  1.0f
-	};
-
-	quadVAO.Bind();
-	unsigned int quadVBO;
-	glGenBuffers(1, &quadVBO);
-	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-	quadVAO.Unbind();
-}
-
-VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
+VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
 		: shader(_shader),
 	maxIntensity(255),
 	maxAttenuation(255),
 	plane(glm::vec3(100,100,50), glm::vec3(0,0,1)),
-	exposure(1.0f),
-	gamma(0.4f),
+	exposure(1.1f),
+	gamma(0.98f),
 	boundingGeometry(_boundingShader),
+	transferFunction(_transferShader, quadVAO),
+	refereceSpatialTransferFunction(_transferShader, quadVAO),
 	scale(1.0f, 1.0f, 1.0f),
 	position(0.0f, 0.0f, 0.0f),
 	normal(0.0f, 0.0f, 1.0f),
 	up(0.0f, 1.0f, 0.0f),
 	eulerAngles(0.0f, 0.0f, 0.0f),
-	shadowSamples(3)
+	shadowSamples(3),
+	treshold(0.006),
+	quadVAO(quadVAO)
 	{
 	// Stores the width, height, and the number of color channels of the image
 	Dimensions dimensions;
@@ -341,25 +157,20 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, const char* direc
 	}
 
 	glm::ivec2 transferDimensions = glm::ivec2(256, 64);
-	std::vector<glm::vec4> transferBytes = defaultTransferFunction(transferDimensions);
-	transferFunction = new Texture2D(transferBytes, transferDimensions, 1, GL_RGBA, GL_FLOAT);
-
-	initQuad();
+	refereceSpatialTransferFunction.spatialTransferFunction(transferDimensions, *voxels);
+	transferFunction = refereceSpatialTransferFunction;
 	initFBOs(contextWidth, contextHeight);
-	boundingGeometry.updateGeometry(*voxels, *transferFunction, 0.00006f);
+	boundingGeometry.updateGeometry(*voxels, transferFunction, treshold);
 
 	light1.position = glm::vec3(300, 50, 300);
 	light1.intensity = glm::vec3(110000, 110000, 90000);
-
+	
 	updateMatrices();
 }
 
 VoxelData::~VoxelData() {
-	quadVAO.Delete();
 	voxels->Delete();
 	delete voxels;
-	transferFunction->Delete();
-	delete transferFunction;
 }
 
 void VoxelData::animate(float dt)
@@ -389,12 +200,15 @@ void VoxelData::draw(Camera& camera) {
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_CULL_FACE);
-	quadVAO.Bind();
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	quadVAO->Bind();
 	shader->Activate();
 	this->exportData();
 	camera.exportData(*shader);
 	voxels->Bind();
-	transferFunction->Bind();
+	transferFunction.Bind();
 
 	glActiveTexture(GL_TEXTURE0 + 2);
 	glBindTexture(GL_TEXTURE_2D, enterTexture);
@@ -408,8 +222,10 @@ void VoxelData::draw(Camera& camera) {
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glEnable(GL_CULL_FACE);
 	voxels->Unbind();
-	transferFunction->Unbind();
+	transferFunction.Unbind();
+	transferFunction.draw();
 }
+
 
 void VoxelData::updateMatrices()
 {
@@ -440,4 +256,19 @@ void VoxelData::rotateIntersectionPlane(float rad)
 	M = glm::rotate(M, rad, glm::vec3(0, 1, 0));
 	glm::vec4 rotated = M * glm::vec4(plane.getNormal(), 1);
 	plane.setNormal(rotated);
+}
+
+void VoxelData::selectTransferFunctionRegion(double xCamPos, double yCamPos)
+{
+	glm::vec4 camPos = glm::vec4(xCamPos, yCamPos, 0, 1);
+	glm::vec4 modelPos = transferFunction.getInvModelMatrix() * camPos;
+	glm::vec2 texCoords = glm::vec2(modelPos.x / 2.0f + 0.5f, 0.5f + modelPos.y / 2.0f);
+	if (texCoords.x >= 0.0f && texCoords.x <= 1.0f
+		&& texCoords.y >= 0.0f && texCoords.y <= 1.0f) {
+		transferFunction.crop(texCoords - glm::vec2(0.1f, 0.5f), texCoords + glm::vec2(0.1f, 0.5f));
+		boundingGeometry.updateGeometry(*voxels, transferFunction, treshold);
+	}
+	else {
+		std::cout << "Out of box: " << modelPos.x << ", " << modelPos.y << std::endl;
+	}
 }

@@ -1,42 +1,30 @@
 #include"Camera.h"
 #include <iostream>
+#include<glm/gtc/matrix_transform.hpp>
+#include<glm/gtc/type_ptr.hpp>
+#include<glm/gtx/rotate_vector.hpp>
+#include<glm/gtx/vector_angle.hpp>
 
-Camera::Camera(int width, int height, glm::vec3 position, glm::vec3 lookDir)
+Camera::Camera(int width, int height, glm::vec3 eye, glm::vec3 center)
+	: width(width), height(height), eye(eye), center(center)
 {
-	Camera::width = width;
-	Camera::height = height;
-	Position = position;
-	this->lookDir = lookDir;
-
 }
 
 void Camera::updateMatrix()
 {
-	// Initializes matrices since otherwise they will be the null matrix
-	glm::mat4 view = glm::mat4(1.0f);
-	glm::mat4 projection = glm::mat4(1.0f);
-
-
 	// Makes camera look in the right direction from the right position
-	view = glm::lookAt(Position, Position + lookDir, prefUp);
+	glm::mat4 view = glm::lookAt(eye, center, prefUp);
 	// Adds perspective to the scene
-	projection = glm::perspective(glm::radians(FOVdeg), (float)width / height, nearPlane, farPlane);
+	glm::mat4 projection = glm::perspective(glm::radians(FOVdeg), (float)width / height, nearPlane, farPlane);
 
-	// Sets new camera matrix
 	cameraMatrix = projection * view;
-
-	//Inverse matrix:
-	glm::mat4 invView = glm::mat4(1.0f);
-	glm::mat4 invProjection = glm::mat4(1.0f);
-	invView = glm::inverse(view);			// Should be imporved!
-	invProjection = glm::inverse(projection);	// Should be imporved!
-	invCameraMatrix = invView * invProjection;
+	invCameraMatrix = glm::inverse(cameraMatrix);
 }
 
 void Camera::updateOrientation(glm::vec3 newPrefUp)
 {
-	glm::vec3 right = glm::cross(lookDir, newPrefUp);
-	lookDir = glm::cross(newPrefUp, right);
+	glm::vec3 right = glm::cross(normalize(center - eye), newPrefUp);
+	center = eye + glm::cross(newPrefUp, right);
 	prefUp = newPrefUp;
 }
 
@@ -50,9 +38,9 @@ void Camera::exportMatrix(Shader& shader)
 
 void Camera::exportData(Shader& shader)
 {
-	glUniform3f(glGetUniformLocation(shader.ID, "camera.eye"), Position.x, Position.y, Position.z);
-	glm::vec3 center = Position + lookDir;
+	glUniform3f(glGetUniformLocation(shader.ID, "camera.eye"), eye.x, eye.y, eye.z);
 	glUniform3f(glGetUniformLocation(shader.ID, "camera.center"), center.x, center.y, center.z);
+	glm::vec3 lookDir = normalize(center - eye);
 	glm::vec3 right = normalize(cross(lookDir, prefUp));
 	glUniform3f(glGetUniformLocation(shader.ID, "camera.right"), right.x, right.y, right.z);
 	glm::vec3 up = normalize(cross(right, lookDir));
@@ -64,9 +52,9 @@ void Camera::exportData(Shader& shader)
 
 void Camera::exportPostprocessDataAsLightCamera(Shader& shader)
 {
-	glUniform3f(glGetUniformLocation(shader.ID, "lightCamera.eye"), Position.x, Position.y, Position.z);
-	glm::vec3 center = Position + lookDir;
+	glUniform3f(glGetUniformLocation(shader.ID, "lightCamera.eye"), eye.x, eye.y, eye.z);
 	glUniform3f(glGetUniformLocation(shader.ID, "lightCamera.center"), center.x, center.y, center.z);
+	glm::vec3 lookDir = normalize(center - eye);
 	glm::vec3 right = normalize(cross(lookDir, prefUp));
 	glUniform3f(glGetUniformLocation(shader.ID, "lightCamera.right"), right.x, right.y, right.z);
 	glm::vec3 up = normalize(cross(right, lookDir));
@@ -80,30 +68,31 @@ void Camera::exportPostprocessDataAsLightCamera(Shader& shader)
 
 void Camera::Inputs(GLFWwindow* window)
 {
+	glm::vec3 lookDir = normalize(center - eye);
 	// Handles key inputs
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
-		Position += speed * lookDir;
+		eye += speed * lookDir;
 	}
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 	{
-		Position += speed * -glm::normalize(glm::cross(lookDir, prefUp));
+		eye += speed * -glm::normalize(glm::cross(lookDir, prefUp));
 	}
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 	{
-		Position += speed * -lookDir;
+		eye += speed * -lookDir;
 	}
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
-		Position += speed * glm::normalize(glm::cross(lookDir, prefUp));
+		eye += speed * glm::normalize(glm::cross(lookDir, prefUp));
 	}
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 	{
-		Position += speed * prefUp;
+		eye += speed * prefUp;
 	}
 	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
 	{
-		Position += speed * -prefUp;
+		eye += speed * -prefUp;
 	}
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
 	{
@@ -168,34 +157,34 @@ void Camera::Inputs(GLFWwindow* window)
 // Not used yet:
 
 void Camera::moveForward(float dt) {
-	glm::vec3 right = glm::normalize(glm::cross(lookDir, prefUp));
-	Position += dt * speed * glm::cross(prefUp, right);
+	glm::vec3 right = glm::normalize(glm::cross(normalize(center - eye), prefUp));
+	eye += dt * speed * glm::cross(prefUp, right);
 }
 
 void Camera::moveBackward(float dt)
 {
-	glm::vec3 right = glm::normalize(glm::cross(lookDir, prefUp));
-	Position += dt * speed * -glm::cross(prefUp, right);
+	glm::vec3 right = glm::normalize(glm::cross(normalize(center - eye), prefUp));
+	eye += dt * speed * -glm::cross(prefUp, right);
 }
 
 void Camera::moveLeft(float dt)
 {
-	Position += dt * speed * -glm::normalize(glm::cross(lookDir, prefUp));
+	eye += dt * speed * -glm::normalize(glm::cross(normalize(center - eye), prefUp));
 }
 
 void Camera::moveRight(float dt)
 {
-	Position += dt * speed * glm::normalize(glm::cross(lookDir, prefUp));
+	eye += dt * speed * glm::normalize(glm::cross(normalize(center - eye), prefUp));
 }
 
 void Camera::moveUp(float dt)
 {
-	Position += dt * speed * prefUp;
+	eye += dt * speed * prefUp;
 }
 
 void Camera::moveDown(float dt)
 {
-	Position += dt * speed * -prefUp;
+	eye += dt * speed * -prefUp;
 }
 
 void Camera::rotate(float mouseX, float mouseY)
@@ -204,6 +193,7 @@ void Camera::rotate(float mouseX, float mouseY)
 	// and then "transforms" them into degrees 
 	float rotX = sensitivity * (float)(mouseY - (height / 2)) / height;
 	float rotY = sensitivity * (float)(mouseX - (width / 2)) / width;
+	glm::vec3 lookDir = normalize(center - eye);
 
 	// Calculates upcoming vertical change in the Orientation
 	glm::vec3 newOrientation = glm::rotate(lookDir, glm::radians(-rotX), glm::normalize(glm::cross(lookDir, prefUp)));
@@ -216,10 +206,36 @@ void Camera::rotate(float mouseX, float mouseY)
 
 	// Rotates the Orientation left and right
 	lookDir = glm::rotate(lookDir, glm::radians(-rotY), prefUp);
-
+	center = eye + lookDir;
 }
 
-void Camera::setPosition(glm::vec3 pos)
+void Camera::rotateAroundBullseye(float mouseX, float mouseY, glm::vec3 bullseye)
 {
-	Position = pos;
+	// Normalizes and shifts the coordinates of the cursor such that they begin in the middle of the screen
+// and then "transforms" them into degrees 
+	float rotX = sensitivity * (float)(mouseY - (height / 2)) / height;
+	float rotY = sensitivity * (float)(mouseX - (width / 2)) / width;
+
+	glm::vec3 toBullseye = bullseye - eye;
+	glm::vec3 lookDir = normalize(center - eye);
+
+	// Calculates upcoming vertical change in the Orientation
+	glm::vec3 newTOBullseye = glm::rotate(toBullseye, glm::radians(-rotX), glm::normalize(glm::cross(lookDir, prefUp)));
+
+	// Decides whether or not the next vertical Orientation is legal or not
+	if (abs(glm::angle(normalize(newTOBullseye), prefUp) - glm::radians(90.0f)) <= glm::radians(85.0f))
+	{
+		toBullseye = newTOBullseye;
+	}
+	// Rotates the Orientation left and right
+	toBullseye = glm::rotate(toBullseye, glm::radians(-rotY), prefUp);
+	eye = bullseye - toBullseye;
+}
+
+void Camera::approachCenter(float delta)
+{
+	float l = length(center - eye);
+	if (l > delta) {
+		eye += delta * normalize(center - eye) * approachCenterSpeed;
+	}
 }

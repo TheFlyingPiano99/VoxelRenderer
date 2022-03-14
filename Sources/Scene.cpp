@@ -60,9 +60,35 @@ GLuint lightIndices[] =
 
 Scene* Scene::instance = nullptr;
 
+void Scene::initQuad()
+{
+	float quadVertices[] =
+	{
+		//Coord	//texCoords
+		1.0f, -1.0f,  1.0f,  0.0f,
+	   -1.0f, -1.0f,  0.0f,  0.0f,
+	   -1.0f,  1.0f,  0.0f,  1.0f,
+
+		1.0f,  1.0f,  1.0f,  1.0f,
+		1.0f, -1.0f,  1.0f,  0.0f,
+	   -1.0f,  1.0f,  0.0f,  1.0f
+	};
+
+	quadVAO.Bind();
+	unsigned int quadVBO;
+	glGenBuffers(1, &quadVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+	quadVAO.Unbind();
+}
+
 void Scene::initCamera()
 {
-	camera = new Camera(contextWidth, contextHeight, glm::vec3(0.0f, 0.0f, 0.0f), glm::normalize(glm::vec3(1, 1, 1)));
+	camera = new Camera(contextWidth, contextHeight, glm::vec3(100.0f, 0.0f, 100.0f), glm::vec3(0, 0, 0));
 }
 
 void Scene::initMeshesShadersObjects()
@@ -75,9 +101,14 @@ void Scene::initMeshesShadersObjects()
 		AssetManager::getInstance()->getShaderFolderPath().append("bounding.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("bounding.frag").c_str()
 	);
+	Shader* transferShader = new Shader(
+		AssetManager::getInstance()->getShaderFolderPath().append("transfer.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("transfer.frag").c_str()
+	);
 	shaders.push_back(voxelShader);
 	shaders.push_back(boundingShader);
-	voxels = new VoxelData(voxelShader, boundingShader, "D:/VisualCpp/VoxelRenderer/Resources/Volumetric/cthead-8bit/", contextWidth, contextHeight);
+	shaders.push_back(transferShader);
+	voxels = new VoxelData(voxelShader, boundingShader, transferShader, &quadVAO, "D:/VisualCpp/VoxelRenderer/Resources/Volumetric/cthead-8bit/", contextWidth, contextHeight);
 }
 
 
@@ -115,7 +146,7 @@ void Scene::destroyInstance()
 
 void Scene::init()
 {
-	postprocessUnit.init();
+	initQuad();
 	initCamera();
 	initMeshesShadersObjects();
 }
@@ -137,6 +168,7 @@ void Scene::destroy()
 		delete sh;
 	}
 	shaders.clear();
+	quadVAO.Delete();
 }
 
 //-----------------------------------------------------------------------------

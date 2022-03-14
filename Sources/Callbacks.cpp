@@ -14,6 +14,9 @@ void Callbacks::setCallbacks(GLFWwindow* window) {
 	glfwSetWindowCloseCallback(window, Callbacks::onWindowClose);
 	glfwSetKeyCallback(window, Callbacks::onKey);
 	glfwSetCursorPosCallback(window, Callbacks::onMouseMove);
+	glfwSetScrollCallback(window, Callbacks::onMouseScroll);
+	glfwSetMouseButtonCallback(window, Callbacks::onMouseClick);
+
 }
 
 
@@ -33,7 +36,7 @@ void Callbacks::onWindowInit(GLFWwindow* window)
 void Callbacks::onWindowRefresh(GLFWwindow* window)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glClearColor(0, 0, 0, 1);
+	glClearColor(0.2, 0.2, 0.2, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	GUI::getInstance()->preDrawInit();
@@ -61,7 +64,7 @@ void Callbacks::onMouseMove(GLFWwindow* window, double xpos, double ypos)
 	}
 
 	// Handles mouse inputs
-	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
 	{
 
 		// Hides mouse cursor
@@ -81,13 +84,13 @@ void Callbacks::onMouseMove(GLFWwindow* window, double xpos, double ypos)
 		glfwGetCursorPos(window, &mouseX, &mouseY);
 
 
-		Scene::getInstance()->getCamera()->rotate(mouseX, mouseY);
+		Scene::getInstance()->getCamera()->rotateAroundBullseye(mouseX, mouseY, glm::vec3(0.0f, 0.0f, 0.0f));
 
 
 		// Sets mouse cursor to the middle of the screen so that it doesn't end up roaming around
 		glfwSetCursorPos(window, (WINDOW_WIDTH / 2), (WINDOW_HEIGHT/ 2));
 	}
-	else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE)
+	else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_RELEASE)
 	{
 		// Unhides cursor since camera is not looking around anymore
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -95,6 +98,23 @@ void Callbacks::onMouseMove(GLFWwindow* window, double xpos, double ypos)
 		firstClick = true;
 	}
 
+}
+
+void Callbacks::onMouseScroll(GLFWwindow* window, double xoffset, double yoffset)
+{
+	Scene::getInstance()->getCamera()->approachCenter(yoffset);
+}
+
+void Callbacks::onMouseClick(GLFWwindow* window, int button, int action, int mods)
+{
+	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+	{
+		double xpos, ypos;
+		glfwGetCursorPos(window, &xpos, &ypos);
+		xpos = xpos / WINDOW_WIDTH * 2.0 - 1.0;
+		ypos = 1.0 - ypos / WINDOW_HEIGHT * 2.0;
+		Scene::getInstance()->getVoxelData()->selectTransferFunctionRegion(xpos, ypos);
+	}
 }
 
 

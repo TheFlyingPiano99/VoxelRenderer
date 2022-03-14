@@ -193,6 +193,7 @@
     <ClCompile Include="TestObject.cpp" />
     <ClCompile Include="Texture1D.cpp" />
     <ClCompile Include="Texture2D.cpp" />
+    <ClCompile Include="TransferFunction.cpp" />
     <ClCompile Include="VAO.cpp" />
     <ClCompile Include="VBO.cpp" />
     <ClCompile Include="Texture3D.cpp" />
@@ -235,6 +236,7 @@
     <ClInclude Include="TestObject.h" />
     <ClInclude Include="Texture1D.h" />
     <ClInclude Include="Texture2D.h" />
+    <ClInclude Include="TransferFunction.h" />
     <ClInclude Include="VAO.h" />
     <ClInclude Include="VBO.h" />
     <ClInclude Include="vectorOperations.h" />
@@ -251,6 +253,8 @@
     <None Include="..\Resources\Shaders\light.vert" />
     <None Include="..\Resources\Shaders\postprocess.frag" />
     <None Include="..\Resources\Shaders\quad.vert" />
+    <None Include="..\Resources\Shaders\transfer.frag" />
+    <None Include="..\Resources\Shaders\transfer.vert" />
     <None Include="..\Resources\Shaders\voxel.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

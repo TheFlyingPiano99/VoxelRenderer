@@ -1,6 +1,7 @@
 #include "BoundingGeometry.h"
 #include"EBO.h"
 #include "VBO.h"
+#include<glm/gtc/type_ptr.hpp>
 
 glm::vec3 cubeVertices[] =
 {
@@ -171,7 +172,7 @@ void BoundingGeometry::calculateFilled(const Dimensions& dimensions,
 	const unsigned int& zDivision,
 	bool* isFilled,
 	Texture3D& voxels,
-	Texture2D& transferFunction)
+	TransferFunction& transferFunction)
 {
 	std::vector<float> averageOpacity = std::vector<float>(xDivision * yDivision * zDivision);
 	for (int i = 0; i < xDivision * yDivision * zDivision; i++) {
@@ -182,6 +183,9 @@ void BoundingGeometry::calculateFilled(const Dimensions& dimensions,
 	int zBlockSize = dimensions.depth / zDivision;
 	int voxelsPerBlock = xBlockSize * yBlockSize * zBlockSize;
 	for (int z = 0; z < dimensions.depth; z++) {
+		if (z % 5 == 0) {
+			std::cout << "Completion: " << z / (float)dimensions.depth * 100.0f << "%" << std::endl;
+		}
 		for (int y = 0; y < dimensions.height; y++) {
 			for (int x = 0; x < dimensions.width; x++) {
 				glm::vec4 gradientIntensity = voxels.resampleGradientAndDensity(glm::ivec3(x, y, z));
@@ -235,8 +239,9 @@ void BoundingGeometry::createIndices(const unsigned int& xDivision, const unsign
 }
 
 
-void BoundingGeometry::updateGeometry(Texture3D& voxels, Texture2D& transferFunction, float threshold)
+void BoundingGeometry::updateGeometry(Texture3D& voxels, TransferFunction& transferFunction, float threshold)
 {
+	std::cout << "Updating bounding geometry." << std::endl;
 	this->threshold = threshold;
 	vertices.clear();
 	indices.clear();
@@ -264,6 +269,7 @@ void BoundingGeometry::updateGeometry(Texture3D& voxels, Texture2D& transferFunc
 	EBO EBO(indices);
 	VAO.LinkAttrib(VBO, 0, 3, GL_FLOAT, sizeof(glm::vec3), (void*)0);
 	VAO.Unbind();
+	std::cout << "Bounding geometry is ready." << std::endl;
 }
 
 void BoundingGeometry::draw(Camera& camera, Light& light, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, unsigned int enterFBO, unsigned int exitFBO, unsigned int lightFBO)
@@ -271,7 +277,7 @@ void BoundingGeometry::draw(Camera& camera, Light& light, glm::mat4& modelMatrix
 	shader->Activate();
 	VAO.Bind();
 	camera.exportMatrix(*shader);
-	glm::vec4 modelSpaceCameraPos = invModelMatrix * glm::vec4(camera.Position, 1.0f);
+	glm::vec4 modelSpaceCameraPos = invModelMatrix * glm::vec4(camera.eye, 1.0f);
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
 	glBindFramebuffer(GL_FRAMEBUFFER, exitFBO);

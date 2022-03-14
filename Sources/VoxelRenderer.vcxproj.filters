@@ -150,6 +150,9 @@
     <ClCompile Include="BoundingGeometry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TransferFunction.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -275,6 +278,9 @@
     <ClInclude Include="Light.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
+    <ClInclude Include="TransferFunction.h">
+      <Filter>Header Files\Model</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Resources\Shaders\default.frag">
@@ -302,6 +308,12 @@
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="..\Resources\Shaders\bounding.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\Resources\Shaders\transfer.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\Resources\Shaders\transfer.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
   </ItemGroup>

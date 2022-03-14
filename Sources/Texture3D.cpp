@@ -122,7 +122,7 @@ const glm::vec4 Texture3D::resampleGradientAndDensity(glm::ivec3 position)
 	glm::vec3 correctionPolynomial = (fraction * (fraction - glm::vec3(1.0f))) / glm::vec3(2.0f);
 	intensity += glm::dot((sample0 - intensity * 2.0f + sample1),
 		correctionPolynomial);
-	return glm::vec4(glm::normalize(sample1 - sample0), intensity);
+	return glm::vec4(sample1 - sample0, intensity);
 }
 
 const float Texture3D::operator()(glm::ivec3 position)

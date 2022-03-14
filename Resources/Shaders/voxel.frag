@@ -79,7 +79,7 @@ vec4 resampleGradientAndDensity(vec3 position)
 	vec3 correctionPolynomial = (fraction * (fraction - 1.0)) / 2.0;
 	intensity += dot((sample0 - intensity * 2.0 + sample1),
 	correctionPolynomial);
-	return vec4(normalize(sample1 - sample0), intensity);
+	return vec4(sample1 - sample0, intensity);
 }
 
 
@@ -116,9 +116,9 @@ vec3 calculateLightLevel(vec3 currentPos, Light light, vec3 gradient, vec3 model
 	+ ka * vec3(1.0);
 }
 
-vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
+vec4 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
 	float rayLength = length(cameraRay);
-	vec3 color = vec3(0.0);
+	vec4 color = vec4(0.0);
 	if (0.00001 < rayLength) {
 		vec3 cameraRayDirection = normalize(cameraRay);
 		float distanceTravelled = 0.0;
@@ -131,7 +131,8 @@ vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
 			vec4 gradientIntesity = resampleGradientAndDensity(currentPos);
 			vec4 colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));
 			vec3 lightLevel = calculateLightLevel(currentPos, light1, gradientIntesity.xyz, cameraRayStart);
-			color += delta * colorAttenuation.rgb * opacity * lightLevel;	// Sum color
+			color.rgb += delta * colorAttenuation.rgb * opacity * lightLevel;	// Sum color
+			color.a += colorAttenuation.a * delta;
 			opacity *= pow(1 - colorAttenuation.a, delta);	// Product opacity
 			currentPos += cameraRayDirection * delta;
 			distanceTravelled += delta;
@@ -139,7 +140,7 @@ vec3 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
 		}
 	}
 	else {
-		return vec3(1, 1, 1);	// Background outside bounding cuboid
+		return vec4(0, 0, 0, 0);	// Background outside bounding cuboid
 	}
 	return color;
 }
@@ -152,11 +153,11 @@ void main() {
 	
 	vec3 start = texture(enterTexture, texCoords).xyz;
 	vec3 ray = texture(exitTexture, texCoords).xyz - start;
-	vec3 hdrColor = calculateColor(start, ray);
+	vec4 hdrColor = calculateColor(start, ray);
 	// HDR Tone mapping
-    vec3 result = vec3(1.0) - exp(-hdrColor * exposure);
+    vec3 result = vec3(1.0) - exp(-hdrColor.rgb * exposure);
 	// GAMMA CORRECTION (OPTIONAL)
     result = pow(result, vec3(1.0 / gamma));
 
-	FragColor = vec4(result, 1.0f);
+	FragColor = vec4(result, hdrColor.a);
 }

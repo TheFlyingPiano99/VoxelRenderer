@@ -4,6 +4,7 @@
 #include "Texture3D.h"
 #include "Light.h"
 #include "Texture2D.h"
+#include "TransferFunction.h"
 
 class BoundingGeometry
 {
@@ -23,7 +24,7 @@ class BoundingGeometry
 		const unsigned int& zDivision,
 		bool* isFilled,
 		Texture3D& voxels,
-		Texture2D& transferFunction);
+		TransferFunction& transferFunction);
 	void createIndices(const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision, bool* isFilled);
 
 	void addPlusZSide(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision);
@@ -44,7 +45,7 @@ public:
 		VAO.Delete();
 	}
 
-	void updateGeometry(Texture3D& voxels, Texture2D& transferFunction, float threshold);
+	void updateGeometry(Texture3D& voxels, TransferFunction& transferFunction, float threshold);
 
 	void draw(Camera& camera, Light& light, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, unsigned int enterFBO, unsigned int exitFBO, unsigned int lightFBO);
 };

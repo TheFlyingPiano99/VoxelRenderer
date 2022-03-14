@@ -5,10 +5,6 @@
 #include<glad/glad.h>
 #include<GLFW/glfw3.h>
 #include<glm/glm.hpp>
-#include<glm/gtc/matrix_transform.hpp>
-#include<glm/gtc/type_ptr.hpp>
-#include<glm/gtx/rotate_vector.hpp>
-#include<glm/gtx/vector_angle.hpp>
 
 #include"shaderClass.h"
 
@@ -16,8 +12,8 @@ class Camera
 {
 public:
 	// Stores the main vectors of the camera
-	glm::vec3 Position;
-	glm::vec3 lookDir = glm::vec3(0.0f, 0.0f, 1.0f);
+	glm::vec3 eye;
+	glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::vec3 prefUp = glm::vec3(0.0f, 1.0f, 0.0f);
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);
 	glm::mat4 invCameraMatrix = glm::mat4(1.0f);
@@ -33,11 +29,12 @@ public:
 	int height;
 
 	// Adjust the speed of the camera and it's sensitivity when looking around
-	float speed = 0.8f;
+	float speed = 1.5f;
 	float sensitivity = 100.0f;
+	float approachCenterSpeed = 10.0f;
 
 	// Camera constructor to set up initial values
-	Camera(int width, int height, glm::vec3 position, glm::vec3 lookDir);
+	Camera(int width, int height, glm::vec3 eye, glm::vec3 center);
 
 	// Updates the camera matrix to the Vertex Shader
 	void updateMatrix();
@@ -61,7 +58,7 @@ public:
 	void moveDown(float dt);
 
 	void rotate(float mouseX, float mouseY);
-
-	void setPosition(glm::vec3 pos);
+	void rotateAroundBullseye(float mouseX, float mouseY, glm::vec3 bullseye);
+	void approachCenter(float delta);
 };
 #endif

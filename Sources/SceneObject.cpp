@@ -1,4 +1,6 @@
 #include "SceneObject.h"
+#include<glm/gtc/type_ptr.hpp>
+#include<glm/gtx/rotate_vector.hpp>
 
 inline void SceneObject::updateMatrix() {
 	modelMatrix = glm::mat4(1.0f);
