@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "GlobalInclude.h"
 
 GUI* GUI::instance = nullptr;
 
@@ -72,14 +73,29 @@ void GUI::configToScene(Scene& scene)
 	if (ImGui::Button("Reset to STF", ImVec2(120, 50))) {
 		scene.getVoxelData()->resetToSTF();
 	}
+	ImGui::SameLine();
 	if (ImGui::Button("Reset to Default TF", ImVec2(120, 50))) {
 		scene.getVoxelData()->resetToDefault();
 	}
+	ImGui::SameLine();
 	if (ImGui::Button("Merge visible", ImVec2(120, 50))) {
 		scene.getVoxelData()->mergeVisibleClasses();
 	}
 	ImGui::EndGroup();
-
+	ImGui::BeginGroup();
+	ImGui::Text("Rotate");
+	if (ImGui::Button("X", ImVec2(25, 25))) {
+		scene.getVoxelData()->rotateModelAroundX(M_PI / 2.0f);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Y", ImVec2(25, 25))) {
+		scene.getVoxelData()->rotateModelAroundY(M_PI / 2.0f);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Z", ImVec2(25, 25))) {
+		scene.getVoxelData()->rotateModelAroundZ(M_PI / 2.0f);
+	}
+	ImGui::EndGroup();
 	ImGui::End();
 }
 

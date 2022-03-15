@@ -28,7 +28,8 @@ class VoxelData
 	glm::vec3 position;
 	glm::vec3 normal;
 	glm::vec3 up;
-	glm::vec3 eulerAngles;
+	glm::vec3 animationEulerAngles;
+	glm::vec3 staticEulerAngles;
 
 	glm::mat4 modelMatrix;
 	glm::mat4 invModelMatrix;
@@ -124,10 +125,12 @@ public :
 		return STFEmission;
 	}
 
-	void mergeVisibleClasses() {
-		transferFunction.grayscale();
-		transferFunction.blur(3);
-	}
+	void mergeVisibleClasses();
 
+	void rotateModelAroundX(float rad);
+
+	void rotateModelAroundY(float rad);
+
+	void rotateModelAroundZ(float rad);
 };
 

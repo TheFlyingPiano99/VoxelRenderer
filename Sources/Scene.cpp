@@ -108,7 +108,19 @@ void Scene::initMeshesShadersObjects()
 	shaders.push_back(voxelShader);
 	shaders.push_back(boundingShader);
 	shaders.push_back(transferShader);
-	voxels = new VoxelData(voxelShader, boundingShader, transferShader, &quadVAO, "D:/VisualCpp/VoxelRenderer/Resources/Volumetric/cthead-8bit/", contextWidth, contextHeight);
+
+	const char* paths[3] = {
+		"D:/VisualCpp/VoxelRenderer/Resources/Volumetric/cthead-8bit/",
+		"D:/VisualCpp/VoxelRenderer/Resources/Volumetric/mrbrain-8bit/",
+		"D:/VisualCpp/VoxelRenderer/Resources/Volumetric/bunny/",
+	};
+	std::cout << "Select data source: [0, 1, 2]" << std::endl;
+	int selection;
+	std::cin >> selection;
+	if (selection > 2 || selection < 0) {
+		selection = 0;
+	}
+	voxels = new VoxelData(voxelShader, boundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
 }
 
 

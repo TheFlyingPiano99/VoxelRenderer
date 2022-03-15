@@ -10,6 +10,8 @@
 #define SHADOW_WIDTH 2000
 #define SHADOW_HEIGHT 2000
 
+# define M_PI           3.14159265358979323846  /* pi */
+
 static struct GlobalVariables {
 	static GLFWwindow* window;
 	static int windowWidth;

@@ -147,7 +147,8 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, Shader* _transfer
 	position(0.0f, 0.0f, 0.0f),
 	normal(0.0f, 0.0f, 1.0f),
 	up(0.0f, 1.0f, 0.0f),
-	eulerAngles(0.0f, 0.0f, 0.0f),
+	animationEulerAngles(0.0f, 0.0f, 0.0f),
+	staticEulerAngles(0.0f, 0.0f, 0.0f),
 	shadowSamples(3),
 	quadVAO(quadVAO),
 	boundingGeometryTreshold(0.006f),
@@ -189,7 +190,7 @@ void VoxelData::animate(float dt)
 {
 //	glm::mat4 M = glm::rotate(dt * 0.001f, up);
 //	normal = M * glm::vec4(normal, 0);
-	eulerAngles.y += dt * 0.0001;
+	animationEulerAngles.y += dt * 0.0001;
 	updateMatrices();
 }
 
@@ -245,9 +246,12 @@ void VoxelData::updateMatrices()
 	Dimensions dim = voxels->getDimensions();
 	modelMatrix =
 		glm::translate(position)
-		* glm::rotate(eulerAngles.x, glm::vec3(1, 0, 0))
-		* glm::rotate(eulerAngles.z, glm::vec3(0, 0, 1))
-		* glm::rotate(eulerAngles.y, glm::vec3(0, 1, 0))
+		* glm::rotate(animationEulerAngles.x, glm::vec3(1, 0, 0))
+		* glm::rotate(animationEulerAngles.z, glm::vec3(0, 0, 1))
+		* glm::rotate(animationEulerAngles.y, glm::vec3(0, 1, 0))
+		* glm::rotate(staticEulerAngles.x, glm::vec3(1, 0, 0))
+		* glm::rotate(staticEulerAngles.z, glm::vec3(0, 0, 1))
+		* glm::rotate(staticEulerAngles.y, glm::vec3(0, 1, 0))
 		* glm::orientation(normal, up)
 		* glm::scale(scale)
 		* glm::translate(glm::vec3(dim.width, dim.height, dim.depth) * -0.5f);	// Origo to center of volume.
@@ -325,4 +329,21 @@ void VoxelData::resetToDefault()
 {
 	transferFunction.defaultTransferFunction(glm::ivec2(256, 128));
 	boundingGeometry.updateGeometry(*voxels, transferFunction, boundingGeometryTreshold);
+}
+
+void VoxelData::mergeVisibleClasses() {
+	transferFunction.grayscale();
+	transferFunction.blur(3);
+}
+
+void VoxelData::rotateModelAroundX(float rad) {
+	staticEulerAngles.x += rad;
+}
+
+void VoxelData::rotateModelAroundY(float rad) {
+	staticEulerAngles.y += rad;
+}
+
+void VoxelData::rotateModelAroundZ(float rad) {
+	staticEulerAngles.z += rad;
 }
