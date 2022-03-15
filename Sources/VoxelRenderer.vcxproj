@@ -170,6 +170,7 @@
     <ClCompile Include="DualNumber.cpp" />
     <ClCompile Include="EBO.cpp" />
     <ClCompile Include="glad.c" />
+    <ClCompile Include="GlobalVariables.cpp" />
     <ClCompile Include="GUI.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_demo.cpp" />

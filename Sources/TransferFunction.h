@@ -31,6 +31,10 @@ public:
 	void floodFill(glm::vec2 startPos, glm::vec4 color, float threshold);
 	void blur(int kernelSize);
 	void normalize();
+	void edgeDetect();
+	void singleColor(glm::vec3 color);
+	void removeColor(glm::vec3 color);
+	void grayscale();
 	void draw();
 	void Bind();
 	void Unbind();
@@ -50,7 +54,8 @@ public:
 	}
 
 	void defaultTransferFunction(glm::ivec2 dimensions);
-	void spatialTransferFunction(glm::ivec2 dimensions, Texture3D& voxels);
+	void spatialTransferFunction(glm::ivec2 dimensions, Texture3D& voxels, float radius, float globalOpacity, float globalEmission);
+	void gradientWeighted(glm::ivec2 dimensions, float globalOpacity);
 
 	glm::vec4& operator()(glm::ivec2 position) {
 		if (texture == nullptr)

@@ -130,7 +130,7 @@ void Scene::preGeometryRenderPassInit()
 Scene* Scene::getInstance()
 {
     if (instance == nullptr) {
-        instance = new Scene(WINDOW_WIDTH, WINDOW_HEIGHT);
+        instance = new Scene(GlobalVariables::windowWidth, GlobalVariables::windowHeight);
     }
     return instance;
 }
@@ -144,8 +144,10 @@ void Scene::destroyInstance()
 }
 
 
-void Scene::init()
+void Scene::init(int contextWidth, int contextHeight)
 {
+	this->contextWidth = contextWidth;
+	this->contextHeight = contextHeight;
 	initQuad();
 	initCamera();
 	initMeshesShadersObjects();
@@ -169,6 +171,10 @@ void Scene::destroy()
 	}
 	shaders.clear();
 	quadVAO.Delete();
+	if (voxels != nullptr) {
+		delete voxels;
+		voxels = nullptr;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -219,4 +225,17 @@ Camera* Scene::getCamera() {
 VoxelData* Scene::getVoxelData()
 {
 	return voxels;
+}
+
+void Scene::onContextResize(int contextWidth, int contextHeight)
+{
+	this->contextWidth = contextWidth;
+	this->contextHeight = contextHeight;
+	if (camera != nullptr) {
+		camera->width = contextWidth;
+		camera->height = contextHeight;
+	}
+	if (voxels != nullptr) {
+		voxels->onContextResize(contextWidth, contextHeight);
+	}
 }

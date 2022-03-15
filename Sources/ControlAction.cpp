@@ -105,3 +105,8 @@ void RotateIntersectionPlaneNegY::execute(Scene* scene, float dt)
 {
 	scene->getVoxelData()->rotateIntersectionPlane(-0.01f * dt);
 }
+
+void ToggleFullScreenMode::execute(Scene* scene, float dt)
+{
+	Callbacks::toggleFullScreen();
+}

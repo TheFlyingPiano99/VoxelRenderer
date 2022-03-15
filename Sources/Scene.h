@@ -31,7 +31,6 @@ class Scene
 	unsigned int contextWidth, contextHeight;
 
 	Scene(unsigned int contextWidth, unsigned int contextHeight) : contextWidth(contextWidth), contextHeight(contextHeight) {
-
 	}
 
 
@@ -51,7 +50,7 @@ public:
 	static Scene* getInstance();
 	static void destroyInstance();
 
-	void init();
+	void init(int contextWidth, int contextHeight);
 	void destroy();
 
 	void control(float dt);
@@ -67,6 +66,6 @@ public:
 
 	VoxelData* getVoxelData();
 
-
+	void onContextResize(int contextWidth, int contextHeight);
 };
 

@@ -44,14 +44,14 @@ void GUI::configToScene(Scene& scene)
 	ImGui::SliderFloat("STF Exposure", &scene.getVoxelData()->getReferenceTransferFunctionExposure(), 0.0f, 50.0f);
 	ImGui::SliderFloat("STF Gamma", &scene.getVoxelData()->getReferenceTransferFunctionGamma(), 0.0f, 10.0f);
 
-	ImGui::SliderFloat("Bounding geometry threshold", &scene.getVoxelData()->getBoundingGeometryThreshold(), 0.0f, 1.0f);
+	ImGui::SliderFloat("Bounding geometry threshold", &scene.getVoxelData()->getBoundingGeometryThreshold(), 0.0f, 0.1f);
 	ImGui::SliderFloat("Transfer function flood fill threshold", &scene.getVoxelData()->getTransferFloodFillThreshold(), 0.0f, 5.0f);
 
 	const char* current_item = scene.getVoxelData()->getCurrentTransferRegionSelectModes();
 	const char** items = scene.getVoxelData()->getTransferRegionSelectModes();
 	if (ImGui::BeginCombo("Transfer region select mode", current_item)) // The second parameter is the label previewed before opening the combo.
 	{
-		for (int n = 0; n < 2; n++)
+		for (int n = 0; n < TRANSFER_MODE_COUNT; n++)
 		{
 			bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
 			if (ImGui::Selectable(items[n], is_selected)) {
@@ -64,6 +64,22 @@ void GUI::configToScene(Scene& scene)
 		}
 		ImGui::EndCombo();
 	}
+	ImGui::SliderFloat("STF class radius", &scene.getVoxelData()->getSTFradius() , 0.0f, 50.0f);
+	ImGui::SliderFloat("STF global opacity", &scene.getVoxelData()->getSTFOpacity(), 0.0f, 50.0f);
+	ImGui::SliderFloat("STF global emission", &scene.getVoxelData()->getSTFEmission(), 0.0f, 2.0f);
+
+	ImGui::BeginGroup();
+	if (ImGui::Button("Reset to STF", ImVec2(120, 50))) {
+		scene.getVoxelData()->resetToSTF();
+	}
+	if (ImGui::Button("Reset to Default TF", ImVec2(120, 50))) {
+		scene.getVoxelData()->resetToDefault();
+	}
+	if (ImGui::Button("Merge visible", ImVec2(120, 50))) {
+		scene.getVoxelData()->mergeVisibleClasses();
+	}
+	ImGui::EndGroup();
+
 	ImGui::End();
 }
 

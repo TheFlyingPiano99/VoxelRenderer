@@ -47,15 +47,14 @@ void TransferFunction::floodFill(glm::vec2 startPos, glm::vec4 color, float thre
 		bytes[i] = glm::vec4(0.0f);
 	}
 	glm::vec4 toReplace = texture->operator()(startPos);
-	glm::vec4 replaceWith = glm::vec4(1.0f);
 	std::queue<glm::ivec2> queue;
 	queue.push(glm::ivec2(startPos.x * (dim.x - 1), startPos.y * (dim.y - 1)));
 	while (!queue.empty()) {
 		glm::ivec2 current = queue.front();
 		queue.pop();
 		glm::vec4 cv = bytes[current.y * dim.x + current.x];
-		if (length(glm::vec3(cv - replaceWith)) > 0.0f) {
-			bytes[current.y * dim.x + current.x] = replaceWith;
+		if (length(glm::vec3(cv - color)) > 0.0f) {
+			bytes[current.y * dim.x + current.x] = color;
 			if (current.x < dim.x - 1) {
 				glm::ivec2 n = glm::ivec2(current.x + 1, current.y);
 				if (length(glm::vec3(texture->operator()(n) - toReplace)) < threshold) {
@@ -143,6 +142,84 @@ void TransferFunction::normalize()
 	texture = new Texture2D(bytes, dim, 1, GL_RGBA, GL_FLOAT);
 }
 
+void TransferFunction::edgeDetect()
+{
+	if (texture == nullptr)
+		return;
+	std::cout << "Edge detect" << std::endl;
+	glm::ivec2 dim = texture->getDimensions();
+	std::vector<glm::vec4> bytes(dim.x * dim.y);
+	for (int y = 0; y < dim.y; y++) {
+		for (int x = 0; x < dim.x; x++) {
+			bytes[y * dim.x + x] = texture->operator()(glm::ivec2(x, y)) * -4.0f;
+			bytes[y * dim.x + x] += texture->operator()(glm::ivec2(x + 1, y));
+			bytes[y * dim.x + x] += texture->operator()(glm::ivec2(x - 1, y));
+			bytes[y * dim.x + x] += texture->operator()(glm::ivec2(x, y + 1));
+			bytes[y * dim.x + x] += texture->operator()(glm::ivec2(x, y - 1));
+		}
+	}
+	delete texture;
+	texture = new Texture2D(bytes, dim, 1, GL_RGBA, GL_FLOAT);
+}
+
+void TransferFunction::singleColor(glm::vec3 color)
+{
+	if (texture == nullptr)
+		return;
+	std::cout << "Remove color" << std::endl;
+	glm::ivec2 dim = texture->getDimensions();
+	std::vector<glm::vec4> bytes(dim.x * dim.y);
+	for (int y = 0; y < dim.y; y++) {
+		for (int x = 0; x < dim.x; x++) {
+			bytes[y * dim.x + x] = texture->operator()(glm::ivec2(x, y));
+			if (!(glm::vec3(0.0f) == (color - glm::vec3(bytes[y * dim.x + x].x, bytes[y * dim.x + x].y, bytes[y * dim.x + x].z)))) {
+				bytes[y * dim.x + x] = glm::vec4(0.0f);
+			}
+		}
+	}
+	delete texture;
+	texture = new Texture2D(bytes, dim, 1, GL_RGBA, GL_FLOAT);
+}
+
+void TransferFunction::removeColor(glm::vec3 color)
+{
+	if (texture == nullptr)
+		return;
+	std::cout << "Remove color" << std::endl;
+	glm::ivec2 dim = texture->getDimensions();
+	std::vector<glm::vec4> bytes(dim.x * dim.y);
+	for (int y = 0; y < dim.y; y++) {
+		for (int x = 0; x < dim.x; x++) {
+			bytes[y * dim.x + x] = texture->operator()(glm::ivec2(x, y));
+			if (glm::vec3(0.0f) == (color - glm::vec3(bytes[y * dim.x + x].x, bytes[y * dim.x + x].y, bytes[y * dim.x + x].z))) {
+				bytes[y * dim.x + x] = glm::vec4(0.0f);
+			}
+		}
+	}
+	delete texture;
+	texture = new Texture2D(bytes, dim, 1, GL_RGBA, GL_FLOAT);
+}
+
+void TransferFunction::grayscale()
+{
+	if (texture == nullptr)
+		return;
+	std::cout << "Grayscale" << std::endl;
+	glm::ivec2 dim = texture->getDimensions();
+	std::vector<glm::vec4> bytes(dim.x * dim.y);
+	for (int y = 0; y < dim.y; y++) {
+		for (int x = 0; x < dim.x; x++) {
+			bytes[y * dim.x + x] = texture->operator()(glm::ivec2(x, y));
+			float gray = (bytes[y * dim.x + x].r + bytes[y * dim.x + x].g + bytes[y * dim.x + x].b) * 3.0f;
+			bytes[y * dim.x + x].r = gray;
+			bytes[y * dim.x + x].g = gray;
+			bytes[y * dim.x + x].b = gray;
+		}
+	}
+	delete texture;
+	texture = new Texture2D(bytes, dim, 1, GL_RGBA, GL_FLOAT);
+}
+
 void TransferFunction::draw()
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -180,7 +257,7 @@ void TransferFunction::defaultTransferFunction(glm::ivec2 dimensions)
 	for (int y = 0; y < dimensions.y; y++) {
 		for (int x = 0; x < dimensions.x; x++) {
 			if (x > 3 && x < 250) {
-				bytes[y * dimensions.x + x].x = x / (float)dimensions.x * y / (float)dimensions.y;
+				bytes[y * dimensions.x + x].x = x / (float)dimensions.x;
 				bytes[y * dimensions.x + x].y = x / (float)dimensions.x * x / (float)dimensions.x;
 				bytes[y * dimensions.x + x].z = x / (float)dimensions.x * x / (float)dimensions.x;
 				bytes[y * dimensions.x + x].w = (std::pow((x - 3), 0.5) <= (float)dimensions.x) ? std::pow((x - 3), 0.5) / (float)dimensions.x : 1.0f;
@@ -199,27 +276,86 @@ void TransferFunction::defaultTransferFunction(glm::ivec2 dimensions)
 	texture = new Texture2D(bytes, dimensions, 1, GL_RGBA, GL_FLOAT);
 }
 
-void TransferFunction::spatialTransferFunction(glm::ivec2 dimensions, Texture3D& voxels) {
+void TransferFunction::spatialTransferFunction(glm::ivec2 dimensions, Texture3D& voxels, float radius, float globalOpacity, float globalEmission) {
 	std::vector<glm::vec4> bytes = std::vector<glm::vec4>(dimensions.x * dimensions.y);
+	std::vector<glm::vec3> barycenters = std::vector<glm::vec3>(dimensions.x * dimensions.y);
+	std::vector <std::vector<glm::vec3>> contributingPositions = std::vector<std::vector<glm::vec3>>(dimensions.x * dimensions.y);
+	std::vector<float> spatialVariances = std::vector<float>(dimensions.x * dimensions.y);
 	for (int i = 0; i < dimensions.x * dimensions.y; i++) {
 		bytes[i] = glm::vec4(0.0f);
+		barycenters[i] = glm::vec3(0.0f);
 	}
-	int minX = 0.0f * (float)dimensions.x;
-	int maxX = 0.98f * (float)dimensions.x;
-	int minY = 0.0f * (float)dimensions.y;
-	int maxY = 0.98f * (float)dimensions.y;
+	for (int y = 0; y < dimensions.y; y++) {
+		for (int x = 0; x < dimensions.x; x++) {
+			bytes[y * dimensions.x + x].r = 0.0f;
+			bytes[y * dimensions.x + x].g = 0.0f;
+			bytes[y * dimensions.x + x].b = 0.0f;
+			bytes[y * dimensions.x + x].a = y / (float)dimensions.y * globalOpacity;
+		}
+	}
 	Dimensions voxelDim = voxels.getDimensions();
-	float divider = voxelDim.width * voxelDim.height * voxelDim.depth * 0.05f;
+	glm::vec3 posDivider = glm::vec3(voxelDim.width, voxelDim.height, voxelDim.depth);
+
+	//Calculate barycenters:
 	for (int z = 0; z < voxelDim.depth; z++) {
 		for (int y = 0; y < voxelDim.height; y++) {
 			for (int x = 0; x < voxelDim.width; x++) {
 				glm::vec4 gradientIntensity = voxels.resampleGradientAndDensity(glm::ivec3(x, y, z));
 				int xb = gradientIntensity.w * (dimensions.x - 1);
 				int yb = glm::length(glm::vec3(gradientIntensity.x, gradientIntensity.y, gradientIntensity.z)) * (dimensions.y - 1);
-				if (xb >= minX && xb <= maxX && yb >= minY && yb <= maxY) {
-					bytes[yb * dimensions.x + xb] += glm::vec4(x, y, z, 1.0f) / divider;
+				if (xb >= 0 && xb < dimensions.x && yb >= 0 && yb < dimensions.y) {
+					glm::vec3 p = glm::vec3(x, y, z) / posDivider;
+					barycenters[yb * dimensions.x + xb] += p;
+					contributingPositions[yb * dimensions.x + xb].push_back(p);
 				}
 			}
+		}
+	}
+	//Calculate spatial variances:
+	for (int i = 0; i < dimensions.x * dimensions.y; i++) {
+		if (contributingPositions[i].size() > 0) {
+			barycenters[i] /= (float)contributingPositions[i].size();
+			spatialVariances[i] = 0.0f;
+			for (int j = 0; j < contributingPositions[i].size(); j++) {
+				spatialVariances[i] += glm::length(contributingPositions[i][j] - barycenters[i]);
+			}
+			spatialVariances[i] /= (float)contributingPositions[i].size();
+		}
+	}
+
+	// Classification:
+	srand(0);
+	for (int i = 0; i < dimensions.x * dimensions.y; i++) {
+
+		if (contributingPositions[i].size() > 0 && bytes[i].r == 0.0f && bytes[i].g == 0.0f && bytes[i].b == 0.0f) {
+			glm::vec3 Crgb = glm::vec3(rand() % 255 / 255.0f, rand() % 255 / 255.0f, rand() % 255 / 255.0f);
+			glm::vec3 b0 = barycenters[i];
+			float v0 = spatialVariances[i];
+			for (int j = 0; j < dimensions.x * dimensions.y; j++) {
+				if (contributingPositions[j].size() > 0 && bytes[j].r == 0.0f && bytes[j].g == 0.0f && bytes[j].b == 0.0f) {
+					float distanceNorm = glm::length(barycenters[j] - b0) + std::abs(v0 - spatialVariances[j]);
+						if (distanceNorm < radius) {
+							bytes[j].r = Crgb.r * globalEmission;
+							bytes[j].g = Crgb.g * globalEmission;
+							bytes[j].b = Crgb.b * globalEmission;
+						}
+				}
+			}
+		}
+	}
+
+	if (texture != nullptr) {
+		delete texture;
+	}
+	texture = new Texture2D(bytes, dimensions, 1, GL_RGBA, GL_FLOAT);
+}
+
+void TransferFunction::gradientWeighted(glm::ivec2 dimensions, float globalOpacity)
+{
+	std::vector<glm::vec4> bytes = std::vector<glm::vec4>(dimensions.x * dimensions.y);
+	for (int y = 0; y < dimensions.y; y++) {
+		for (int x = 0; x < dimensions.x; x++) {
+			bytes[y * dimensions.x + x] = glm::vec4(y / (float)dimensions.y * globalOpacity);
 		}
 	}
 	if (texture != nullptr) {

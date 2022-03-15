@@ -138,3 +138,11 @@ public:
 
 	void execute(Scene* scene, float dt) override;
 };
+
+class ToggleFullScreenMode : public ControlAction {
+public:
+	ToggleFullScreenMode() : ControlAction(GLFW_KEY_TAB, true) {
+	}
+
+	void execute(Scene* scene, float dt) override;
+};

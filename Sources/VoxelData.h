@@ -9,13 +9,15 @@
 #include "Light.h"
 #include "TransferFunction.h"
 
+#define TRANSFER_MODE_COUNT 4
+
 class VoxelData
 {
 	Shader* shader = nullptr;	// Don't delete!
 	Texture3D* voxels = nullptr;
 
 	VAO* quadVAO;
-	unsigned int enterFBO, exitFBO, lightFBO;
+	unsigned int enterFBO, exitFBO, lightFBO = 0;
 	unsigned int enterTexture, exitTexture, lightTexture;
 
 	BoundingGeometry boundingGeometry;
@@ -39,11 +41,12 @@ class VoxelData
 	std::string name;
 	float boundingGeometryTreshold;
 	float transferFloodFillTreshold;
+	float STFradius, STFOpacity, STFEmission;
 
 	unsigned int shadowSamples;
 
-	const char* transferRegionSelectModes[2] = { "Flood fill", "General area" };
-	const char* currentTransferRegionSelectMode = "Flood fill";
+	const char* transferRegionSelectModes[TRANSFER_MODE_COUNT] = { "Flood fill", "General area", "Single class", "Remove class"};
+	const char* currentTransferRegionSelectMode = "Single class";
 
 	void exportData();
 
@@ -63,6 +66,8 @@ public :
 	void shiftIntersectionPlane(float delta);
 	void rotateIntersectionPlane(float rad);
 	void selectTransferFunctionRegion(double xpos, double ypos);
+	void resetToSTF();
+	void resetToDefault();
 
 	std::string getName() {
 		return name;
@@ -102,6 +107,26 @@ public :
 
 	float& getReferenceTransferFunctionGamma() {
 		return refereceSpatialTransferFunction.getGamma();
+	}
+
+	void onContextResize(int width, int height) {
+		initFBOs(width, height);
+	}
+
+	float& getSTFradius() {
+		return STFradius;
+	}
+	
+	float& getSTFOpacity() {
+		return STFOpacity;
+	}
+	float& getSTFEmission() {
+		return STFEmission;
+	}
+
+	void mergeVisibleClasses() {
+		transferFunction.grayscale();
+		transferFunction.blur(3);
 	}
 
 };

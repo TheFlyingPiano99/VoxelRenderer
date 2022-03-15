@@ -4,7 +4,6 @@
 
 namespace Callbacks
 {
-
 	void setCallbacks(GLFWwindow* window);
 
 	void onWindowInit(GLFWwindow* window);
@@ -14,5 +13,7 @@ namespace Callbacks
 	void onMouseMove(GLFWwindow* window, double xpos, double ypos);
 	void onMouseScroll(GLFWwindow* window, double xoffset, double yoffset);
 	void onMouseClick(GLFWwindow* window, int button, int action, int mods);
+
+	void toggleFullScreen();
 };
 

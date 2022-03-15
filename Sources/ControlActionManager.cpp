@@ -35,6 +35,7 @@ void ControlActionManager::registerDefault()
 	registerAction(new ShiftIntersectionPlaneNeg());
 	registerAction(new RotateIntersectionPlanePosY());
 	registerAction(new RotateIntersectionPlaneNegY());
+	registerAction(new ToggleFullScreenMode());
 }
 
 void ControlActionManager::registerAction(ControlAction* toRegister)

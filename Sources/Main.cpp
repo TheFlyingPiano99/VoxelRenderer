@@ -8,6 +8,19 @@
 
 #define PROJECT_NAME "Voxel renderer"
 
+void setFullScreenMode(GLFWwindow*& window, bool isFullScreenMode) {
+	if (isFullScreenMode) {
+		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+		glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, 60);
+	}
+	else {
+		glfwSetWindowMonitor(window, nullptr, 50, 50, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, 60);
+	}
+	glfwGetWindowSize(window, &GlobalVariables::windowWidth, &GlobalVariables::windowHeight);
+}
+
+
 int initWindow(GLFWwindow*& window) {
 	// Initialize GLFW
 	glfwInit();
@@ -20,23 +33,23 @@ int initWindow(GLFWwindow*& window) {
 	// So that means we only have the modern functions
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	// Create a GLFWwindow object of 800 by 800 pixels, naming it "YoutubeOpenGL"
-	window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, PROJECT_NAME, NULL, NULL);
+	window = glfwCreateWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, PROJECT_NAME, NULL, NULL);
 	// Error check if the window fails to create
-
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window!" << std::endl;
 		glfwTerminate();
 		return -1;
 	}
+	GlobalVariables::window = window;
 	// Introduce the window into the current context
 	glfwMakeContextCurrent(window);
+
+	setFullScreenMode(window, GlobalVariables::fullScreenMode);
 
 	Callbacks::setCallbacks(window);
 	return 0;
 }
-
 
 int main()
 {
