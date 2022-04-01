@@ -5,6 +5,7 @@
 inline void SceneObject::updateMatrix() {
 	modelMatrix = glm::mat4(1.0f);
 	modelMatrix = glm::translate(position);
+	invModelMatrix = glm::inverse(modelMatrix);
 }
 
 void SceneObject::animate(float dt)
@@ -19,16 +20,17 @@ void SceneObject::draw(Camera& camera)
 {
 	if (nullptr != mesh && nullptr != shader) {
 		shader->Activate();
-		exportMatrix("model");
-		if (light != nullptr) {
-			glm::vec3 color = light->getDiffuse();
-			glUniform3f(glGetUniformLocation(shader->ID, "lightColor"), color.x, color.y, color.z);
+		exportMatrix();
+		camera.exportData(*shader);
+		if (nullptr != light) {
+			light->exportData(shader);
 		}
 		mesh->Draw(*shader, camera);
 	}
 }
 
-void SceneObject::exportMatrix(const char* uniform)
+void SceneObject::exportMatrix()
 {
-	glUniformMatrix4fv(glGetUniformLocation(shader->ID, uniform), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "sceneObject.modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "sceneObject.invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
 }

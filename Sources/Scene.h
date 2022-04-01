@@ -20,7 +20,8 @@ class Scene
 	Camera* camera = nullptr;
 	std::vector<LightSource*> lights;
 	std::vector<Shader*> shaders;
-	PostprocessUnit postprocessUnit;
+
+	std::vector<SceneObject*> sceneObjects;
 
 	VAO quadVAO;
 	VoxelData* voxels = nullptr;
@@ -35,12 +36,9 @@ class Scene
 
 
 	void initQuad();
+	void initInfinitePlane();
 	void initCamera();
 	void initMeshesShadersObjects();
-
-	void preShadowRenderPassInit();
-	void preGeometryRenderPassInit();
-
 
 public:
 	~Scene() {

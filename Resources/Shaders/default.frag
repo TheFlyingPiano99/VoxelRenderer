@@ -5,8 +5,8 @@
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec4 BrightColor;
 
-// Imports the current position from the Vertex Shader
-in vec3 crntPos;
+// Imports the world position from the Vertex Shader
+in vec4 worldPos;
 // Imports the normal from the Vertex Shader
 in vec3 Normal;
 // Imports the color from the Vertex Shader
@@ -36,7 +36,7 @@ struct PointLight {
 	vec3 diffuse;
 	vec3 specular;
 };
-#define NO_OF_POINT_LIGHTS 4
+#define NO_OF_POINT_LIGHTS 1
 uniform PointLight pointLights[NO_OF_POINT_LIGHTS];
 
 struct SpotLight {
@@ -86,10 +86,11 @@ vec3 calculatePointLight(PointLight light, vec3 fragPos, vec3 normal, vec3 viewD
 	if (useTexture) {
 		specular *= texture(specular0, texCoord).r;
 	}
+	/*
 	else {
 		specular *= 1;
 	}
-
+	*/
 	ambient *= attenuation;
 	diffuse *= attenuation;
 	specular *= attenuation;
@@ -163,13 +164,13 @@ float logisticDepth(float depth, float steepness, float offset) {
 void main()
 {
 	vec3 normal = normalize(Normal);
-	vec3 viewDir = normalize(camPos - crntPos);
+	vec3 viewDir = normalize(camPos - worldPos.xyz);
 	vec3 lightSum = vec3(0, 0, 0);
 
 	//lightSum += calculateDirectionalLight(dirLight, crntPos, normal, viewDir);
 
 	for (int i = 0; i < NO_OF_POINT_LIGHTS; i++) {
-		lightSum += calculatePointLight(pointLights[i], crntPos, normal, viewDir);
+		lightSum += calculatePointLight(pointLights[i], worldPos.xyz, normal, viewDir);
 	}
 	//float depth = logisticDepth(gl_FragCoord.z, 0.5, 5.0);
 	//FragColor = vec4(lightSum * (1 - depth) + depth * vec3(0.07, 0.13, 0.17), 1.0f);

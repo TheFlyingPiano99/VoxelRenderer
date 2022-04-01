@@ -290,7 +290,7 @@ void TransferFunction::spatialTransferFunction(glm::ivec2 dimensions, Texture3D&
 			bytes[y * dimensions.x + x].r = 0.0f;
 			bytes[y * dimensions.x + x].g = 0.0f;
 			bytes[y * dimensions.x + x].b = 0.0f;
-			bytes[y * dimensions.x + x].a = y / (float)dimensions.y * globalOpacity;
+			bytes[y * dimensions.x + x].a = sqrt(y / (float)dimensions.y) * globalOpacity;
 		}
 	}
 	Dimensions voxelDim = voxels.getDimensions();

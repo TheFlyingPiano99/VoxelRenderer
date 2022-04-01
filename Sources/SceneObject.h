@@ -22,11 +22,12 @@ protected:
 	PointLight* light = nullptr;	// NULL if no light source
 
 	glm::mat4 modelMatrix = glm::mat4(1.0f);
+	glm::mat4 invModelMatrix = glm::mat4(1.0f);
 
 	/*
 	* Exports model matrix into shader uniform
 	*/
-	void exportMatrix(const char* uniform);
+	void exportMatrix();
 
 public:
 	SceneObject(Mesh* _mesh = nullptr, Shader* _shader = nullptr) : mesh(_mesh), shader(_shader) {

@@ -14,10 +14,10 @@ namespace fs = std::filesystem;
 // Vertices coordinates
 Vertex vertices[] =
 { //               COORDINATES           /            COLORS          /           TexCoord         /       NORMALS         //
-	Vertex{glm::vec3(-1.0f, 0.0f,  1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
-	Vertex{glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f)},
-	Vertex{glm::vec3(1.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f)},
-	Vertex{glm::vec3(1.0f, 0.0f,  1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f)}
+	Vertex{glm::vec4(-1.0f, 0.0f,  1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
+	Vertex{glm::vec4(-1.0f, 0.0f, -1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f)},
+	Vertex{glm::vec4(1.0f, 0.0f, -1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f)},
+	Vertex{glm::vec4(1.0f, 0.0f,  1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f)}
 };
 
 // Indices for vertices order
@@ -29,14 +29,14 @@ GLuint indices[] =
 
 Vertex lightVertices[] =
 { //     COORDINATES     //
-	Vertex{glm::vec3(-0.1f, -0.1f,  0.1f)},
-	Vertex{glm::vec3(-0.1f, -0.1f, -0.1f)},
-	Vertex{glm::vec3(0.1f, -0.1f, -0.1f)},
-	Vertex{glm::vec3(0.1f, -0.1f,  0.1f)},
-	Vertex{glm::vec3(-0.1f,  0.1f,  0.1f)},
-	Vertex{glm::vec3(-0.1f,  0.1f, -0.1f)},
-	Vertex{glm::vec3(0.1f,  0.1f, -0.1f)},
-	Vertex{glm::vec3(0.1f,  0.1f,  0.1f)}
+	Vertex{glm::vec4(-0.1f, -0.1f,  0.1f, 1.0f)},
+	Vertex{glm::vec4(-0.1f, -0.1f, -0.1f, 1.0f)},
+	Vertex{glm::vec4(0.1f, -0.1f, -0.1f, 1.0f)},
+	Vertex{glm::vec4(0.1f, -0.1f,  0.1f, 1.0f)},
+	Vertex{glm::vec4(-0.1f,  0.1f,  0.1f, 1.0f)},
+	Vertex{glm::vec4(-0.1f,  0.1f, -0.1f, 1.0f)},
+	Vertex{glm::vec4(0.1f,  0.1f, -0.1f, 1.0f)},
+	Vertex{glm::vec4(0.1f,  0.1f,  0.1f, 1.0f)}
 };
 
 GLuint lightIndices[] =
@@ -86,6 +86,69 @@ void Scene::initQuad()
 	quadVAO.Unbind();
 }
 
+void Scene::initInfinitePlane()
+{
+	Shader* defaultIncrementalShader = new Shader(
+		AssetManager::getInstance()->getShaderFolderPath().append("default.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("default.frag").c_str()
+	);
+	shaders.push_back(defaultIncrementalShader);
+
+	std::vector<Vertex> infinitePlaneVertices;
+	std::vector<GLuint> infinitePlaneIndices;
+	std::vector<Texture2D> infinitePlaneTextures;
+
+	glm::vec3 color = glm::vec3(0.0f, 0.5f, 0.2f);
+	Vertex v1;
+	v1.color = color;
+	v1.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+	v1.position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	v1.texUV = glm::vec2(0.5f, 0.5f);
+
+	Vertex v2;
+	v2.color = color;
+	v2.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+	v2.position = glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f);
+	v2.texUV = glm::vec2(0.0f, 1.0f);
+
+	Vertex v3;
+	v3.color = color;
+	v3.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+	v3.position = glm::vec4(1.0f, 0.0f, -1.0f, 0.0f);
+	v3.texUV = glm::vec2(1.0f, 1.0f);
+
+	Vertex v4;
+	v4.color = color;
+	v4.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+	v4.position = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
+	v4.texUV = glm::vec2(0.5f, 0.0f);
+
+	infinitePlaneVertices.push_back(v1);
+	infinitePlaneVertices.push_back(v2);
+	infinitePlaneVertices.push_back(v3);
+	infinitePlaneVertices.push_back(v4);
+	infinitePlaneIndices.push_back(0);
+	infinitePlaneIndices.push_back(1);
+	infinitePlaneIndices.push_back(2);
+
+	infinitePlaneIndices.push_back(0);
+	infinitePlaneIndices.push_back(2);
+	infinitePlaneIndices.push_back(3);
+
+	infinitePlaneIndices.push_back(0);
+	infinitePlaneIndices.push_back(3);
+	infinitePlaneIndices.push_back(1);
+
+	SceneObject* infinitePlane = new SceneObject(new Mesh(infinitePlaneVertices, infinitePlaneIndices, infinitePlaneTextures),
+		defaultIncrementalShader);
+	sceneObjects.push_back(infinitePlane);
+
+	PointLight* ligth = new PointLight(0, glm::vec3(0, 1.0f, 0), glm::vec3(1000, 1000, 1000));
+	lights.push_back(ligth);
+	infinitePlane->setLight(ligth);
+
+}
+
 void Scene::initCamera()
 {
 	camera = new Camera(contextWidth, contextHeight, glm::vec3(100.0f, 0.0f, 100.0f), glm::vec3(0, 0, 0));
@@ -93,6 +156,7 @@ void Scene::initCamera()
 
 void Scene::initMeshesShadersObjects()
 {
+
 	Shader* voxelShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("voxel.frag").c_str()
@@ -109,6 +173,7 @@ void Scene::initMeshesShadersObjects()
 	shaders.push_back(boundingShader);
 	shaders.push_back(transferShader);
 
+
 	const char* paths[3] = {
 		"D:/VisualCpp/VoxelRenderer/Resources/Volumetric/cthead-8bit/",
 		"D:/VisualCpp/VoxelRenderer/Resources/Volumetric/mrbrain-8bit/",
@@ -122,21 +187,6 @@ void Scene::initMeshesShadersObjects()
 	}
 	voxels = new VoxelData(voxelShader, boundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
 }
-
-
-void Scene::preShadowRenderPassInit()
-{
-	postprocessUnit.preShadowPassInit();
-	glEnable(GL_DEPTH_TEST);
-}
-
-void Scene::preGeometryRenderPassInit()
-{
-	postprocessUnit.preGeometryRenderPassInit(backgroundColor);
-	glEnable(GL_DEPTH_TEST);
-	camera->updateMatrix();
-}
-
 
 
 Scene* Scene::getInstance()
@@ -187,6 +237,10 @@ void Scene::destroy()
 		delete voxels;
 		voxels = nullptr;
 	}
+
+	for (auto obj : sceneObjects) {
+		delete obj;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -195,12 +249,20 @@ void Scene::control(float dt)
 {
     ControlActionManager::getInstance()->executeQueue(this, dt);
 
+	for (auto obj : sceneObjects) {
+		obj->control(dt);
+	}
+
 	voxels->optimize(dt, pause, cameraLastActive);
 	cameraLastActive += dt;
 }
 
 void Scene::animate(float dt)
 {
+	for (auto obj : sceneObjects) {
+		obj->animate(dt);
+	}
+
 	if (!pause) {
 		voxels->animate(dt);
 	}
@@ -208,10 +270,13 @@ void Scene::animate(float dt)
 
 void Scene::draw()
 {
-	//preGeometryRenderPassInit();
 	camera->updateMatrix();
+
+	for (auto obj : sceneObjects) {
+		obj->draw(*camera);
+	}
+
 	voxels->draw(*camera);
-	//postprocessUnit.renderToScreen(*camera, *sun->getLightCamera(), *planet, *sun);
 }
 
 void Scene::togglePause()
@@ -222,11 +287,6 @@ void Scene::togglePause()
 void Scene::toggleGravitation()
 {
 	gravitation = !gravitation;
-}
-
-PostprocessUnit* Scene::getPostprocessUnit()
-{
-	return &postprocessUnit;
 }
 
 Camera* Scene::getCamera() {

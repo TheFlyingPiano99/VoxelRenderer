@@ -203,7 +203,7 @@ void VoxelData::optimize(float dt, bool paused, float cameraLastActive) {
 		shadowSamples = (hardCap >= c)? c : hardCap;
 	}
 	else {
-		shadowSamples = 3;
+		shadowSamples = 10;
 	}
 }
 
@@ -231,6 +231,8 @@ void VoxelData::draw(Camera& camera) {
 
 	glActiveTexture(GL_TEXTURE0 + 4);
 	glBindTexture(GL_TEXTURE_2D, lightTexture);
+
+
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glEnable(GL_CULL_FACE);

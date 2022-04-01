@@ -19,8 +19,6 @@ void Callbacks::setCallbacks(GLFWwindow* window) {
 
 }
 
-
-
 void Callbacks::onWindowInit(GLFWwindow* window)
 {
 	int width, height;
@@ -59,12 +57,8 @@ void Callbacks::onKey(GLFWwindow* window, int key, int scancode, int action, int
 }
 
 
-
 void Callbacks::onMouseMove(GLFWwindow* window, double xpos, double ypos)
 {
-	if (GUI::getInstance()->isVisible()) {
-		return;
-	}
 
 	// Handles mouse inputs
 	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)

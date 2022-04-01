@@ -24,8 +24,8 @@ struct Light {
 };
 uniform Light light1;
 
-/*
-float trilinearInterpolation(vec3 currentPos, out vec3 gradient) {
+
+float trilinearInterpolation(vec3 currentPos) {
 	vec3 currentVoxel = vec3(ivec3(currentPos));
 	vec3 inVoxelPos = currentPos - currentVoxel;
 	float sample000 = texture(voxels, (currentVoxel + vec3(0,0,0)) / resolution).r;
@@ -46,20 +46,14 @@ float trilinearInterpolation(vec3 currentPos, out vec3 gradient) {
 				+ (sample110 * (1.0 - inVoxelPos.z) + sample111 * inVoxelPos.z) * inVoxelPos.y
 		   ) * inVoxelPos.x;
 
-	float sampleGNegX = texture(voxels, (currentVoxel + vec3(-1,0,0)) / resolution).r;
-	float sampleGNegY = texture(voxels, (currentVoxel + vec3(0,-1,0)) / resolution).r;
-	float sampleGNegZ = texture(voxels, (currentVoxel + vec3(0,0,-1)) / resolution).r;
-
-	gradient = (vec3(1.0) - inVoxelPos) * (vec3(sample000) - vec3(sampleGNegX, sampleGNegY, sampleGNegZ)) / 2.0
-	+ inVoxelPos * (vec3(sample100, sample010,sample001) - vec3(sample000)) / 2.0;
 	return filtered;
 }
-*/
+
 
 vec4 resampleGradientAndDensity(vec3 position)
 {
 	vec3 normPos = position / resolution;
-	float intensity = texture(voxels, normPos).r;
+	float intensity = trilinearInterpolation(position);
 	vec3 stepSize = 1.0 / resolution;
 	vec3 sample0, sample1;
 	sample0.x = texture(voxels,
@@ -108,7 +102,7 @@ vec3 calculateLightLevel(vec3 currentPos, Light light, vec3 gradient, vec3 model
 	float specular = pow(max(dot(normal, halfway), 0.0), 10);
 	float diffuse = max(dot(normal, lightDir), 0.0);
 	vec3 intensity = opacity / disanceToLightSource / disanceToLightSource * light.intensity;
-	float ka = 0.1;
+	float ka = 0.01;
 	float kd = 1.0;
 	float ks = 1.0;
 	return kd * diffuse * intensity 
@@ -125,7 +119,7 @@ vec4 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
 		vec3 currentPos = cameraRayStart;
 		int iterations = 0;
 
-		float delta = rayLength / 100.0;
+		float delta = rayLength / 256.0;
 		float opacity = 1.0;
 		while (distanceTravelled < rayLength) {
 			vec4 gradientIntesity = resampleGradientAndDensity(currentPos);
