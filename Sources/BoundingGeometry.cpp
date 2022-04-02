@@ -3,6 +3,7 @@
 #include "VBO.h"
 #include<glm/gtc/type_ptr.hpp>
 
+
 glm::vec3 cubeVertices[] =
 {
 	glm::vec3(0.0f, 0.0f,  1.0f),
@@ -43,19 +44,22 @@ void BoundingGeometry::addCuboid(glm::vec3 scale, glm::vec3 translation) {
 
 void BoundingGeometry::calculateDivision(const Dimensions& dimensions, unsigned int& xDivision, unsigned int& yDivision, unsigned int& zDivision)
 {
-	for (unsigned int i = 32; i >= 1; i--) {
+	int initX = 128;
+	int initY = 128;
+	int initZ = 64;
+	for (unsigned int i = initX; i >= 1; i--) {
 		if (dimensions.width % i == 0) {
 			xDivision = i;
 			break;
 		}
 	}
-	for (unsigned int i = 32; i >= 1; i--) {
+	for (unsigned int i = initY; i >= 1; i--) {
 		if (dimensions.height % i == 0) {
 			yDivision = i;
 			break;
 		}
 	}
-	for (unsigned int i = 32; i >= 1; i--) {
+	for (unsigned int i = initZ; i >= 1; i--) {
 		if (dimensions.depth % i == 0) {
 			zDivision = i;
 			break;
@@ -171,7 +175,7 @@ void BoundingGeometry::calculateFilled(const Dimensions& dimensions,
 	const unsigned int& yDivision,
 	const unsigned int& zDivision,
 	bool* isFilled,
-	Texture3D& voxels,
+	Texture3D& voxelTexture,
 	TransferFunction& transferFunction)
 {
 	std::vector<float> averageOpacity = std::vector<float>(xDivision * yDivision * zDivision);
@@ -188,7 +192,7 @@ void BoundingGeometry::calculateFilled(const Dimensions& dimensions,
 		}
 		for (int y = 0; y < dimensions.height; y++) {
 			for (int x = 0; x < dimensions.width; x++) {
-				glm::vec4 gradientIntensity = voxels.resampleGradientAndDensity(glm::ivec3(x, y, z));
+				glm::vec4 gradientIntensity = voxelTexture.resampleGradientAndDensity(glm::ivec3(x, y, z));
 				float gradientLength = glm::length(glm::vec3(gradientIntensity.x, gradientIntensity.y, gradientIntensity.z));
 				float intensity = gradientIntensity.w;
 				float opacity = transferFunction(glm::vec2(intensity, gradientLength)).w;
@@ -239,14 +243,14 @@ void BoundingGeometry::createIndices(const unsigned int& xDivision, const unsign
 }
 
 
-void BoundingGeometry::updateGeometry(Texture3D& voxels, TransferFunction& transferFunction, float threshold)
+void BoundingGeometry::updateGeometry(Texture3D& voxelTexture, TransferFunction& transferFunction, float threshold)
 {
 	std::cout << "Updating bounding geometry." << std::endl;
 	this->threshold = threshold;
 	vertices.clear();
 	indices.clear();
 
-	Dimensions dimensions = voxels.getDimensions();
+	Dimensions dimensions = voxelTexture.getDimensions();
 	unsigned int xDivision, yDivision, zDivision;
 	calculateDivision(dimensions, xDivision, yDivision, zDivision);
 	bool* isFilled = new bool[xDivision * yDivision * zDivision];
@@ -256,7 +260,7 @@ void BoundingGeometry::updateGeometry(Texture3D& voxels, TransferFunction& trans
 		yDivision,
 		zDivision,
 		isFilled,
-		voxels,
+		voxelTexture,
 		transferFunction);
 
 	createVertexGrid(dimensions, xDivision, yDivision, zDivision);
@@ -272,16 +276,17 @@ void BoundingGeometry::updateGeometry(Texture3D& voxels, TransferFunction& trans
 	std::cout << "Bounding geometry is ready." << std::endl;
 }
 
-void BoundingGeometry::draw(Camera& camera, Light& light, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, unsigned int enterFBO, unsigned int exitFBO, unsigned int lightFBO)
+void BoundingGeometry::draw(Camera& camera, std::vector<Light>& lights, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, unsigned int enterFBO, unsigned int exitFBO, unsigned int lightFBOs[16])
 {
 	shader->Activate();
 	VAO.Bind();
 	camera.exportMatrix(*shader);
-	glm::vec4 modelSpaceCameraPos = invModelMatrix * glm::vec4(camera.eye, 1.0f);
-	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "sceneObject.modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
+	glm::vec4 modelSpaceCameraPos = invModelMatrix * glm::vec4(camera.eye, 1.0f);
+	modelSpaceCameraPos = modelSpaceCameraPos / modelSpaceCameraPos.w;
 	glBindFramebuffer(GL_FRAMEBUFFER, exitFBO);
-	glClearColor(modelSpaceCameraPos.x, modelSpaceCameraPos.y, modelSpaceCameraPos.z, 0);
+	glClearColor(modelSpaceCameraPos.x, modelSpaceCameraPos.y, modelSpaceCameraPos.z, 1.0);
 	glClearDepth(0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glDisable(GL_CULL_FACE);
@@ -290,21 +295,25 @@ void BoundingGeometry::draw(Camera& camera, Light& light, glm::mat4& modelMatrix
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, enterFBO);
-	glClearColor(modelSpaceCameraPos.x, modelSpaceCameraPos.y, modelSpaceCameraPos.z, 0);
+	glClearColor(modelSpaceCameraPos.x, modelSpaceCameraPos.y, modelSpaceCameraPos.z, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, lightFBO);
-	glm::vec4 modelSpaceLightPos = invModelMatrix * glm::vec4(light.position, 1.0f);
-	glClearColor(modelSpaceLightPos.x, modelSpaceLightPos.y, modelSpaceLightPos.z, 0);
-	glClearDepth(1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glDisable(GL_CULL_FACE);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(light.viewProjMatrix));
-	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+	
+	for (int i = 0; i < lights.size(); i++) {
+		glBindFramebuffer(GL_FRAMEBUFFER, lightFBOs[i]);
+		glm::vec4 modelSpaceLightPos = invModelMatrix * lights[i].position;
+		modelSpaceLightPos = modelSpaceLightPos / modelSpaceLightPos.w;
+		glClearColor(modelSpaceLightPos.x, modelSpaceLightPos.y, modelSpaceLightPos.z, 1.0);
+		glClearDepth(1);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glDisable(GL_CULL_FACE);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
+		glUniformMatrix4fv(glGetUniformLocation(shader->ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(lights[i].viewProjMatrix));
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+	}
 }

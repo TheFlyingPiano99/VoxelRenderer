@@ -9,7 +9,7 @@
 
 class TransferFunction
 {
-	Shader* shader;
+	Shader* shader = nullptr;
 	glm::mat4 modelMatrix;
 	glm::mat4 invModelMatrix;
 	Texture2D* texture = nullptr;
@@ -54,7 +54,7 @@ public:
 	}
 
 	void defaultTransferFunction(glm::ivec2 dimensions);
-	void spatialTransferFunction(glm::ivec2 dimensions, Texture3D& voxels, float radius, float globalOpacity, float globalEmission);
+	void spatialTransferFunction(glm::ivec2 dimensions, Texture3D& voxelTexture, float radius, float globalOpacity, float globalEmission);
 	void gradientWeighted(glm::ivec2 dimensions, float globalOpacity);
 
 	glm::vec4& operator()(glm::ivec2 position) {

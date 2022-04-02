@@ -319,5 +319,8 @@
     <None Include="..\Resources\Shaders\transfer.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
+    <None Include="..\Resources\Shaders\quad.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

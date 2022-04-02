@@ -12,7 +12,6 @@ class BoundingGeometry
 	VAO VAO;
 	std::vector<glm::vec3> vertices;
 	std::vector<GLuint> indices;
-	glm::mat4 modelMatrix;
 	float threshold;
 
 	void addCuboid(glm::vec3 scale, glm::vec3 translation);
@@ -23,7 +22,7 @@ class BoundingGeometry
 		const unsigned int& yDivision,
 		const unsigned int& zDivision,
 		bool* isFilled,
-		Texture3D& voxels,
+		Texture3D& voxelTexture,
 		TransferFunction& transferFunction);
 	void createIndices(const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision, bool* isFilled);
 
@@ -39,14 +38,14 @@ class BoundingGeometry
 
 public:
 	BoundingGeometry(Shader* _shader)
-		: shader(_shader), modelMatrix(1.0f), threshold(0.01f) {
+		: shader(_shader), threshold(0.01f) {
 	}
 	~BoundingGeometry() {
 		VAO.Delete();
 	}
 
-	void updateGeometry(Texture3D& voxels, TransferFunction& transferFunction, float threshold);
+	void updateGeometry(Texture3D& voxelTexture, TransferFunction& transferFunction, float threshold);
 
-	void draw(Camera& camera, Light& light, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, unsigned int enterFBO, unsigned int exitFBO, unsigned int lightFBO);
+	void draw(Camera& camera, std::vector<Light>& lights, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, unsigned int enterFBO, unsigned int exitFBO, unsigned int lightFBOs[16]);
 };
 

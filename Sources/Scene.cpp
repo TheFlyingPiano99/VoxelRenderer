@@ -127,31 +127,34 @@ void Scene::initInfinitePlane()
 	infinitePlaneVertices.push_back(v2);
 	infinitePlaneVertices.push_back(v3);
 	infinitePlaneVertices.push_back(v4);
-	infinitePlaneIndices.push_back(0);
-	infinitePlaneIndices.push_back(1);
 	infinitePlaneIndices.push_back(2);
-
-	infinitePlaneIndices.push_back(0);
-	infinitePlaneIndices.push_back(2);
-	infinitePlaneIndices.push_back(3);
-
-	infinitePlaneIndices.push_back(0);
-	infinitePlaneIndices.push_back(3);
 	infinitePlaneIndices.push_back(1);
+	infinitePlaneIndices.push_back(0);
+
+	infinitePlaneIndices.push_back(3);
+	infinitePlaneIndices.push_back(2);
+	infinitePlaneIndices.push_back(0);
+
+	infinitePlaneIndices.push_back(1);
+	infinitePlaneIndices.push_back(3);
+	infinitePlaneIndices.push_back(0);
 
 	SceneObject* infinitePlane = new SceneObject(new Mesh(infinitePlaneVertices, infinitePlaneIndices, infinitePlaneTextures),
 		defaultIncrementalShader);
 	sceneObjects.push_back(infinitePlane);
 
-	PointLight* ligth = new PointLight(0, glm::vec3(0, 1.0f, 0), glm::vec3(1000, 1000, 1000));
-	lights.push_back(ligth);
-	infinitePlane->setLight(ligth);
-
 }
 
 void Scene::initCamera()
 {
-	camera = new Camera(contextWidth, contextHeight, glm::vec3(100.0f, 0.0f, 100.0f), glm::vec3(0, 0, 0));
+	camera = new Camera(contextWidth, contextHeight, glm::vec3(500.0f, 400.0f, 500.0f), glm::vec3(0, 300, 0));
+	lights.push_back(Light());	// Headlight
+	lights[0].powerDensity = glm::vec3(headLightPower);
+	camera->moved = true;
+	//lights.push_back(Light());	// Static light
+	//lights[1].position = glm::vec4(0.0f, 300.0f, 300.0f, 1.0f);
+	//lights[1].powerDensity = glm::vec3(10000.0f, 10000.0f, 10000.0f);
+
 }
 
 void Scene::initMeshesShadersObjects()
@@ -160,6 +163,10 @@ void Scene::initMeshesShadersObjects()
 	Shader* voxelShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("voxel.frag").c_str()
+	);
+	quadShader = new Shader(
+		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("quad.frag").c_str()
 	);
 	Shader* boundingShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("bounding.vert").c_str(),
@@ -170,6 +177,7 @@ void Scene::initMeshesShadersObjects()
 		AssetManager::getInstance()->getShaderFolderPath().append("transfer.frag").c_str()
 	);
 	shaders.push_back(voxelShader);
+	shaders.push_back(quadShader);
 	shaders.push_back(boundingShader);
 	shaders.push_back(transferShader);
 
@@ -186,6 +194,27 @@ void Scene::initMeshesShadersObjects()
 		selection = 0;
 	}
 	voxels = new VoxelData(voxelShader, boundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
+}
+
+void Scene::initQuadFBO()
+{
+	if (quadFBO > 0) {	// Not the first call
+		glDeleteFramebuffers(1, &quadFBO);
+		glDeleteTextures(1, &quadTexture);
+	}
+
+	glGenFramebuffers(1, &quadFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, quadFBO);
+
+	glGenTextures(1, &quadTexture);
+	glBindTexture(GL_TEXTURE_2D, quadTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, contextWidth, contextHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, quadTexture, 0);
 }
 
 
@@ -211,6 +240,8 @@ void Scene::init(int contextWidth, int contextHeight)
 	this->contextWidth = contextWidth;
 	this->contextHeight = contextHeight;
 	initQuad();
+	//initInfinitePlane();
+	initQuadFBO();
 	initCamera();
 	initMeshesShadersObjects();
 }
@@ -222,9 +253,6 @@ void Scene::destroy()
 		camera = nullptr;
 	}
 
-	for (auto lg : lights) {
-		delete lg;
-	}
 	lights.clear();
 
 	for (auto sh : shaders) {
@@ -253,30 +281,70 @@ void Scene::control(float dt)
 		obj->control(dt);
 	}
 
-	voxels->optimize(dt, pause, cameraLastActive);
+	voxels->control(dt, pause, cameraLastActive);
 	cameraLastActive += dt;
 }
 
 void Scene::animate(float dt)
 {
-	for (auto obj : sceneObjects) {
-		obj->animate(dt);
-	}
-
 	if (!pause) {
+		for (auto obj : sceneObjects) {
+			obj->animate(dt);
+		}
 		voxels->animate(dt);
 	}
+
+	glm::vec3 dir = glm::normalize(camera->center - camera->eye);
+	glm::vec3 right = glm::cross(dir, camera->prefUp);
+	glm::vec3 up = glm::cross(right, dir);
+	glm::vec3 p = voxels->getPosition() - dir * 200.0f + up * 200.0f +  right * 200.0f;
+	lights[0].position = glm::vec4(p.x, p.y, p.z, 1.0f);
+	lights[0].powerDensity = glm::vec3(headLightPower);
+	static float prevPower;
+	if (prevPower != headLightPower) {
+		camera->moved = true;
+	}
+	prevPower = headLightPower;
 }
 
 void Scene::draw()
 {
-	camera->updateMatrix();
 
-	for (auto obj : sceneObjects) {
-		obj->draw(*camera);
+	bool cameraMoved = camera->update();
+
+	if (cameraMoved || voxels->popChanged()) {
+		partToDraw = 0;
 	}
 
-	voxels->draw(*camera);
+	if (partToDraw >= 0) {
+		glBindFramebuffer(GL_FRAMEBUFFER, quadFBO);
+		glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		for (auto obj : sceneObjects) {
+			obj->draw(*camera, lights);
+		}
+
+		voxels->draw(*camera, lights, quadFBO, glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 0.0f), (partToDraw + 1) / (float)noOfPartsToDraw);
+		partToDraw++;
+		
+		if (partToDraw == noOfPartsToDraw) {
+			partToDraw = -1;
+		}
+	}
+
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	quadShader->Activate();
+	quadVAO.Bind();
+	glUniform2f(glGetUniformLocation(quadShader->ID, "scale"), 1.0f, 1.0f);
+	glUniform2f(glGetUniformLocation(quadShader->ID, "offset"), 0.0f, 0.0f);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, quadTexture);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	
 }
 
 void Scene::togglePause()
@@ -307,7 +375,9 @@ void Scene::onContextResize(int contextWidth, int contextHeight)
 		camera->width = contextWidth;
 		camera->height = contextHeight;
 	}
+	initQuadFBO();
 	if (voxels != nullptr) {
 		voxels->onContextResize(contextWidth, contextHeight);
 	}
+	camera->moved = true;
 }

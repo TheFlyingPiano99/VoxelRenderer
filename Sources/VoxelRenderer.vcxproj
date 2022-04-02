@@ -253,6 +253,7 @@
     <None Include="..\Resources\Shaders\light.frag" />
     <None Include="..\Resources\Shaders\light.vert" />
     <None Include="..\Resources\Shaders\postprocess.frag" />
+    <None Include="..\Resources\Shaders\quad.frag" />
     <None Include="..\Resources\Shaders\quad.vert" />
     <None Include="..\Resources\Shaders\transfer.frag" />
     <None Include="..\Resources\Shaders\transfer.vert" />

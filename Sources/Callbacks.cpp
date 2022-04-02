@@ -36,10 +36,6 @@ void Callbacks::onWindowInit(GLFWwindow* window)
 
 void Callbacks::onWindowRefresh(GLFWwindow* window)
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glClearColor(0.2, 0.2, 0.2, 1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	GUI::getInstance()->preDrawInit();
 
 	Scene::getInstance()->draw();
@@ -81,7 +77,7 @@ void Callbacks::onMouseMove(GLFWwindow* window, double xpos, double ypos)
 		glfwGetCursorPos(window, &mouseX, &mouseY);
 
 
-		Scene::getInstance()->getCamera()->rotateAroundBullseye(mouseX, mouseY, glm::vec3(0.0f, 0.0f, 0.0f));
+		Scene::getInstance()->getCamera()->rotateAroundBullseye(mouseX, mouseY, Scene::getInstance()->getVoxelData()->getPosition());
 
 
 		// Sets mouse cursor to the middle of the screen so that it doesn't end up roaming around

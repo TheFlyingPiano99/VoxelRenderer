@@ -2,7 +2,7 @@
 #include<glm/gtc/type_ptr.hpp>
 #include<glm/gtx/rotate_vector.hpp>
 
-inline void SceneObject::updateMatrix() {
+inline void SceneObject::update() {
 	modelMatrix = glm::mat4(1.0f);
 	modelMatrix = glm::translate(position);
 	invModelMatrix = glm::inverse(modelMatrix);
@@ -12,19 +12,22 @@ void SceneObject::animate(float dt)
 {
 	if (nullptr != animation) {
 		animation->perform(this, dt);
-		updateMatrix();
+		update();
 	}
 }
 
-void SceneObject::draw(Camera& camera)
+void SceneObject::draw(Camera& camera, std::vector<Light>& lights)
 {
 	if (nullptr != mesh && nullptr != shader) {
 		shader->Activate();
 		exportMatrix();
 		camera.exportData(*shader);
-		if (nullptr != light) {
-			light->exportData(shader);
+		for (int i = 0; i < lights.size(); i++) {
+			lights[i].exportData(*shader, i);
 		}
+		glUniform1i(glGetUniformLocation(shader->ID, "lightCount"), lights.size());
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_DEPTH_TEST);
 		mesh->Draw(*shader, camera);
 	}
 }

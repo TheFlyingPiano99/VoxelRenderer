@@ -10,15 +10,18 @@ Camera::Camera(int width, int height, glm::vec3 eye, glm::vec3 center)
 {
 }
 
-void Camera::updateMatrix()
+bool Camera::update()
 {
 	// Makes camera look in the right direction from the right position
 	glm::mat4 view = glm::lookAt(eye, center, prefUp);
 	// Adds perspective to the scene
 	glm::mat4 projection = glm::perspective(glm::radians(FOVdeg), (float)width / height, nearPlane, farPlane);
 
-	cameraMatrix = projection * view;
-	invCameraMatrix = glm::inverse(cameraMatrix);
+	viewProjMatrix = projection * view;
+	invViewProjMatrix = glm::inverse(viewProjMatrix);
+	bool prevMooved = moved;
+	moved = false;
+	return prevMooved;
 }
 
 void Camera::updateOrientation(glm::vec3 newPrefUp)
@@ -31,8 +34,8 @@ void Camera::updateOrientation(glm::vec3 newPrefUp)
 void Camera::exportMatrix(Shader& shader)
 {
 	// Exports camera matrix
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "camera.invViewProjMatrix"), 1, GL_FALSE, glm::value_ptr(invCameraMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(viewProjMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "camera.invViewProjMatrix"), 1, GL_FALSE, glm::value_ptr(invViewProjMatrix));
 }
 
 
@@ -61,8 +64,8 @@ void Camera::exportPostprocessDataAsLightCamera(Shader& shader)
 	glUniform3f(glGetUniformLocation(shader.ID, "lightCamera.up"), up.x, up.y, up.z);
 	glUniform1f(glGetUniformLocation(shader.ID, "lightCamera.FOVrad"), glm::radians(FOVdeg));
 	glUniform1f(glGetUniformLocation(shader.ID, "lightCamera.aspectRatio"), width / (float)height);
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "lightCamera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "lightCamera.invViewProjMatrix"), 1, GL_FALSE, glm::value_ptr(invCameraMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "lightCamera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(viewProjMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "lightCamera.invViewProjMatrix"), 1, GL_FALSE, glm::value_ptr(invViewProjMatrix));
 }
 
 
@@ -159,32 +162,38 @@ void Camera::Inputs(GLFWwindow* window)
 void Camera::moveForward(float dt) {
 	glm::vec3 right = glm::normalize(glm::cross(normalize(center - eye), prefUp));
 	eye += dt * speed * glm::cross(prefUp, right);
+	moved = true;
 }
 
 void Camera::moveBackward(float dt)
 {
 	glm::vec3 right = glm::normalize(glm::cross(normalize(center - eye), prefUp));
 	eye += dt * speed * -glm::cross(prefUp, right);
+	moved = true;
 }
 
 void Camera::moveLeft(float dt)
 {
 	eye += dt * speed * -glm::normalize(glm::cross(normalize(center - eye), prefUp));
+	moved = true;
 }
 
 void Camera::moveRight(float dt)
 {
 	eye += dt * speed * glm::normalize(glm::cross(normalize(center - eye), prefUp));
+	moved = true;
 }
 
 void Camera::moveUp(float dt)
 {
 	eye += dt * speed * prefUp;
+	moved = true;
 }
 
 void Camera::moveDown(float dt)
 {
 	eye += dt * speed * -prefUp;
+	moved = true;
 }
 
 void Camera::rotate(float mouseX, float mouseY)
@@ -207,6 +216,7 @@ void Camera::rotate(float mouseX, float mouseY)
 	// Rotates the Orientation left and right
 	lookDir = glm::rotate(lookDir, glm::radians(-rotY), prefUp);
 	center = eye + lookDir;
+	moved = true;
 }
 
 void Camera::rotateAroundBullseye(float mouseX, float mouseY, glm::vec3 bullseye)
@@ -230,6 +240,7 @@ void Camera::rotateAroundBullseye(float mouseX, float mouseY, glm::vec3 bullseye
 	// Rotates the Orientation left and right
 	toBullseye = glm::rotate(toBullseye, glm::radians(-rotY), prefUp);
 	eye = bullseye - toBullseye;
+	moved = true;
 }
 
 void Camera::approachCenter(float delta)
@@ -238,4 +249,5 @@ void Camera::approachCenter(float delta)
 	if (l > delta) {
 		eye += delta * normalize(center - eye) * approachCenterSpeed;
 	}
+	moved = true;
 }

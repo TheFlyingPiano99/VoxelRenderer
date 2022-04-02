@@ -222,12 +222,17 @@ void TransferFunction::grayscale()
 
 void TransferFunction::draw()
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	if (shader != nullptr) {
+		shader->Activate();
+	}
+	else {
+		return;
+	}
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
 	quadVAO->Bind();
-	shader->Activate();
 	texture->Bind();
 
 	glUniform1f(glGetUniformLocation(shader->ID, "exposure"), displayExposure);
@@ -276,7 +281,7 @@ void TransferFunction::defaultTransferFunction(glm::ivec2 dimensions)
 	texture = new Texture2D(bytes, dimensions, 1, GL_RGBA, GL_FLOAT);
 }
 
-void TransferFunction::spatialTransferFunction(glm::ivec2 dimensions, Texture3D& voxels, float radius, float globalOpacity, float globalEmission) {
+void TransferFunction::spatialTransferFunction(glm::ivec2 dimensions, Texture3D& voxelTexture, float radius, float globalOpacity, float globalEmission) {
 	std::vector<glm::vec4> bytes = std::vector<glm::vec4>(dimensions.x * dimensions.y);
 	std::vector<glm::vec3> barycenters = std::vector<glm::vec3>(dimensions.x * dimensions.y);
 	std::vector <std::vector<glm::vec3>> contributingPositions = std::vector<std::vector<glm::vec3>>(dimensions.x * dimensions.y);
@@ -293,14 +298,14 @@ void TransferFunction::spatialTransferFunction(glm::ivec2 dimensions, Texture3D&
 			bytes[y * dimensions.x + x].a = sqrt(y / (float)dimensions.y) * globalOpacity;
 		}
 	}
-	Dimensions voxelDim = voxels.getDimensions();
+	Dimensions voxelDim = voxelTexture.getDimensions();
 	glm::vec3 posDivider = glm::vec3(voxelDim.width, voxelDim.height, voxelDim.depth);
 
 	//Calculate barycenters:
 	for (int z = 0; z < voxelDim.depth; z++) {
 		for (int y = 0; y < voxelDim.height; y++) {
 			for (int x = 0; x < voxelDim.width; x++) {
-				glm::vec4 gradientIntensity = voxels.resampleGradientAndDensity(glm::ivec3(x, y, z));
+				glm::vec4 gradientIntensity = voxelTexture.resampleGradientAndDensity(glm::ivec3(x, y, z));
 				int xb = gradientIntensity.w * (dimensions.x - 1);
 				int yb = glm::length(glm::vec3(gradientIntensity.x, gradientIntensity.y, gradientIntensity.z)) * (dimensions.y - 1);
 				if (xb >= 0 && xb < dimensions.x && yb >= 0 && yb < dimensions.y) {
@@ -366,6 +371,7 @@ void TransferFunction::gradientWeighted(glm::ivec2 dimensions, float globalOpaci
 
 void TransferFunction::operator=(TransferFunction& transferFunction)
 {
+	shader = transferFunction.shader;
 	glm::ivec2 dim = transferFunction.getDimensions();
 	if (dim.x == 0 || dim.y == 0) {	// Clear if empty.
 		if (texture != nullptr) {

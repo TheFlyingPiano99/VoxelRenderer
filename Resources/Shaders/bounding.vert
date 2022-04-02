@@ -12,11 +12,14 @@ struct Camera {
 };
 uniform Camera camera;
 
-uniform mat4 modelMatrix;
+struct SceneObject {
+	mat4 modelMatrix;
+};
+uniform SceneObject sceneObject;
 
 
 void main()
 {
 	modelPos = aPos;
-	gl_Position = camera.viewProjMatrix * modelMatrix * vec4(aPos, 1.0);
+	gl_Position = camera.viewProjMatrix * sceneObject.modelMatrix * vec4(aPos, 1.0);
 }

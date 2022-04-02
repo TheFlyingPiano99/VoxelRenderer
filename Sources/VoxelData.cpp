@@ -7,16 +7,15 @@
 
 void VoxelData::exportData()
 {
-	Dimensions dim = voxels->getDimensions();
+	Dimensions dim = voxelTexture->getDimensions();
 	glUniform3f(glGetUniformLocation(shader->ID, "resolution"),
 		dim.width , dim.height, dim.depth);
-	glUniform3f(glGetUniformLocation(shader->ID, "light1.position"),
-		light1.position.x, light1.position.y, light1.position.z);
-	glUniform3f(glGetUniformLocation(shader->ID, "light1.intensity"),
-		light1.intensity.x, light1.intensity.y, light1.intensity.z);
-	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "light1.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(light1.viewProjMatrix));
 	glUniform1f(glGetUniformLocation(shader->ID, "exposure"), exposure);
 	glUniform1f(glGetUniformLocation(shader->ID, "gamma"), gamma);
+	glUniform1f(glGetUniformLocation(shader->ID, "shininess"), shininess);
+	glUniform3f(glGetUniformLocation(shader->ID, "specularColor"), specularColor.r, specularColor.g, specularColor.b);
+	glUniform3f(glGetUniformLocation(shader->ID, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
+	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
 	glUniform1ui(glGetUniformLocation(shader->ID, "shadowSamples"), shadowSamples);
 }
@@ -74,7 +73,9 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 	if (enterFBO > 0) {	// Not the first call
 		glDeleteFramebuffers(1, &enterFBO);
 		glDeleteFramebuffers(1, &exitFBO);
-		glDeleteFramebuffers(1, &lightFBO);
+		for (int i = 0; i < 16; i++) {
+			glDeleteFramebuffers(1, &(lightFBOs[i]));
+		}
 	}
 
 	// Enter FBO
@@ -113,23 +114,26 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);	// The same render buffer to both exit and enter FBOs.
 
-	glGenFramebuffers(1, &lightFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, lightFBO);
+	//Lights
+	for (int i = 0; i < 16; i++) {
+		glGenFramebuffers(1, &(lightFBOs[i]));
+		glBindFramebuffer(GL_FRAMEBUFFER, lightFBOs[i]);
 
-	glGenTextures(1, &lightTexture);
-	glBindTexture(GL_TEXTURE_2D, lightTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 2048, 2048, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glGenTextures(1, &(lightTextures[i]));
+		glBindTexture(GL_TEXTURE_2D, lightTextures[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, contextWidth, contextHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightTexture, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightTextures[i], 0);
 
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 2048, 2048);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+		glGenRenderbuffers(1, &rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+	}
 }
 
 
@@ -142,25 +146,28 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, Shader* _transfer
 	gamma(0.98f),
 	boundingGeometry(_boundingShader),
 	transferFunction(_transferShader, quadVAO),
-	refereceSpatialTransferFunction(_transferShader, quadVAO),
+	referenceSpatialTransferFunction(_transferShader, quadVAO),
 	scale(1.0f, 1.0f, 1.0f),
-	position(0.0f, 0.0f, 0.0f),
+	position(0.0f, 300.0f, 0.0f),
 	normal(0.0f, 0.0f, 1.0f),
 	up(0.0f, 1.0f, 0.0f),
 	animationEulerAngles(0.0f, 0.0f, 0.0f),
 	staticEulerAngles(0.0f, 0.0f, 0.0f),
-	shadowSamples(3),
+	shadowSamples(2),
 	quadVAO(quadVAO),
 	boundingGeometryTreshold(0.006f),
 	transferFloodFillTreshold(4.0f),
 	STFradius(0.2f),
 	STFEmission(1.0f),
-	STFOpacity(1.0f)
+	STFOpacity(1.0f),
+	shininess(20.0f),
+	specularColor(0.2f, 0.2f, 0.2f),
+	ambientColor(0.0001f, 0.0001f, 0.0001f)
 	{
 	// Stores the width, height, and the number of color channels of the image
 	Dimensions dimensions;
 	if (readDimensions(std::string(directory).append("dimensions.txt").c_str(), name, dimensions)) {
-		voxels = new Texture3D(directory, dimensions, 0, GL_RED);
+		voxelTexture = new Texture3D(directory, dimensions, 0, GL_RED);
 		scale = glm::vec3(dimensions.widthScale, dimensions.heightScale, dimensions.depthScale);
 	}
 	else {
@@ -168,22 +175,20 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, Shader* _transfer
 	}
 	
 	// Transfer function:
-	refereceSpatialTransferFunction.spatialTransferFunction(glm::ivec2(256, 128), *voxels, STFradius, STFOpacity, STFEmission);
+	referenceSpatialTransferFunction.spatialTransferFunction(glm::ivec2(256, 128), *voxelTexture, STFradius, STFOpacity, STFEmission);
 	resetToDefault();
 	transferFunction.setCamSpacePosition(glm::vec2(0.5f, -0.8f));
-	refereceSpatialTransferFunction.setCamSpacePosition(glm::vec2(-0.5f, -0.8f));
+	referenceSpatialTransferFunction.setCamSpacePosition(glm::vec2(-0.5f, -0.8f));
 
 	initFBOs(contextWidth, contextHeight);
 
-	light1.position = glm::vec3(300, 50, 300);
-	light1.intensity = glm::vec3(110000, 110000, 90000);
-	
 	updateMatrices();
 }
 
 VoxelData::~VoxelData() {
-	voxels->Delete();
-	delete voxels;
+	voxelTexture->Delete();
+	delete voxelTexture;
+
 }
 
 void VoxelData::animate(float dt)
@@ -192,26 +197,26 @@ void VoxelData::animate(float dt)
 //	normal = M * glm::vec4(normal, 0);
 	animationEulerAngles.y += dt * 0.0001;
 	updateMatrices();
+	changed = true;
 }
 
-void VoxelData::optimize(float dt, bool paused, float cameraLastActive) {
-	return;
-	static int hardCap = 20;
-	if (paused) {
-		int c = cameraLastActive / 20;
-		hardCap = 0.8 * hardCap + 0.2 * 30.0 / dt;
-		shadowSamples = (hardCap >= c)? c : hardCap;
-	}
-	else {
-		shadowSamples = 10;
-	}
+void VoxelData::control(float dt, bool paused, float cameraLastActive) {
 }
 
 
-void VoxelData::draw(Camera& camera) {
-	boundingGeometry.draw(camera, light1, modelMatrix, invModelMatrix, enterFBO, exitFBO, lightFBO);
+void VoxelData::draw(Camera& camera, std::vector<Light>& lights, unsigned int quadFBO, glm::vec2 scale, glm::vec2 offset, float depthLimit) {
+	for (int i = 0; i < lights.size(); i++) {
+		
+		glm::vec3 lightPos(lights[i].position.x, lights[i].position.y, lights[i].position.z);
+		float w = lights[i].position.w;
+		glm::vec3 eye(lightPos + lightPos * (300.0f - 300.0f * w));
+		glm::mat4 view = glm::lookAt(eye, eye + glm::normalize(position - eye), up);
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 1000.0f);
+		lights[i].viewProjMatrix = projection * view;
+	}
+	boundingGeometry.draw(camera, lights, modelMatrix, invModelMatrix, enterFBO, exitFBO, lightFBOs);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, quadFBO);
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -220,7 +225,14 @@ void VoxelData::draw(Camera& camera) {
 	shader->Activate();
 	this->exportData();
 	camera.exportData(*shader);
-	voxels->Bind();
+	for (int i = 0; i < lights.size(); i++) {
+		lights[i].exportData(*shader, i);
+	}
+	glUniform1ui(glGetUniformLocation(shader->ID, "lightCount"), lights.size());
+	glUniform1f(glGetUniformLocation(shader->ID, "depthLimit"), depthLimit);
+
+
+	voxelTexture->Bind();
 	transferFunction.Bind();
 
 	glActiveTexture(GL_TEXTURE0 + 2);
@@ -229,23 +241,38 @@ void VoxelData::draw(Camera& camera) {
 	glActiveTexture(GL_TEXTURE0 + 3);
 	glBindTexture(GL_TEXTURE_2D, exitTexture);
 
-	glActiveTexture(GL_TEXTURE0 + 4);
-	glBindTexture(GL_TEXTURE_2D, lightTexture);
-
-
+	for (int i = 0; i < lights.size(); i++) {
+		glActiveTexture(GL_TEXTURE0 + 4 + i);
+		glBindTexture(GL_TEXTURE_2D, lightTextures[i]);
+	}
+	
+	glUniform1i(glGetUniformLocation(shader->ID, "voxels"), voxelTexture->unit);
+	glUniform1i(glGetUniformLocation(shader->ID, "colorAttenuationTransfer"), 1);
+	glUniform1i(glGetUniformLocation(shader->ID, "enterTexture"), 2);
+	glUniform1i(glGetUniformLocation(shader->ID, "exitTexture"), 3);
+	
+	/*
+	for (int i = 0; i < lights.size(); i++) {	// Setting unirom binding of light textures
+		std::string uniformName("lights[");
+		uniformName.append(std::to_string(i)).append("].exitTexture");
+		glUniform1i(glGetUniformLocation(shader->ID, uniformName.c_str()), 4 + i);
+	}
+	*/
+	glUniform2f(glGetUniformLocation(shader->ID, "scale"), scale.x, scale.y);
+	glUniform2f(glGetUniformLocation(shader->ID, "offset"), offset.x, offset.y);
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glEnable(GL_CULL_FACE);
-	voxels->Unbind();
+	voxelTexture->Unbind();
 	transferFunction.Unbind();
 	transferFunction.draw();
-	refereceSpatialTransferFunction.draw();
+	referenceSpatialTransferFunction.draw();
 }
 
 
 void VoxelData::updateMatrices()
 {
-	Dimensions dim = voxels->getDimensions();
+	Dimensions dim = voxelTexture->getDimensions();
 	modelMatrix =
 		glm::translate(position)
 		* glm::rotate(animationEulerAngles.x, glm::vec3(1, 0, 0))
@@ -258,15 +285,12 @@ void VoxelData::updateMatrices()
 		* glm::scale(scale)
 		* glm::translate(glm::vec3(dim.width, dim.height, dim.depth) * -0.5f);	// Origo to center of volume.
 	invModelMatrix = glm::inverse(modelMatrix);
-
-	glm::mat4 view = glm::lookAt(light1.position, light1.position + glm::normalize(position - light1.position), up);
-	glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 1000.0f);
-	light1.viewProjMatrix = projection * view;
 }
 
 void VoxelData::shiftIntersectionPlane(float delta)
 {
 	plane.setPoint(plane.getPoint() + delta * plane.getNormal());
+	changed = true;
 }
 
 void VoxelData::rotateIntersectionPlane(float rad)
@@ -275,6 +299,7 @@ void VoxelData::rotateIntersectionPlane(float rad)
 	M = glm::rotate(M, rad, glm::vec3(0, 1, 0));
 	glm::vec4 rotated = M * glm::vec4(plane.getNormal(), 1);
 	plane.setNormal(rotated);
+	changed = true;
 }
 
 void VoxelData::selectTransferFunctionRegion(double xCamPos, double yCamPos)
@@ -288,7 +313,7 @@ void VoxelData::selectTransferFunctionRegion(double xCamPos, double yCamPos)
 		inBound = true;
 	}
 	else {
-		modelPos = refereceSpatialTransferFunction.getInvModelMatrix() * camPos;
+		modelPos = referenceSpatialTransferFunction.getInvModelMatrix() * camPos;
 		texCoords = glm::vec2(modelPos.x / 2.0f + 0.5f, 0.5f + modelPos.y / 2.0f);
 		if (texCoords.x >= 0.0f && texCoords.x <= 1.0f
 			&& texCoords.y >= 0.0f && texCoords.y <= 1.0f) {
@@ -298,8 +323,8 @@ void VoxelData::selectTransferFunctionRegion(double xCamPos, double yCamPos)
 
 	if (inBound) {
 		if (std::string(currentTransferRegionSelectMode) == std::string(transferRegionSelectModes[0])) {
-			glm::vec3 color = refereceSpatialTransferFunction(texCoords);
-			transferFunction = refereceSpatialTransferFunction;
+			glm::vec3 color = referenceSpatialTransferFunction(texCoords);
+			transferFunction = referenceSpatialTransferFunction;
 			transferFunction.floodFill(texCoords, glm::vec4(color.r, color.g, color.b, 1), transferFloodFillTreshold);
 			transferFunction.blur(3);
 		}
@@ -307,45 +332,58 @@ void VoxelData::selectTransferFunctionRegion(double xCamPos, double yCamPos)
 			transferFunction.crop(texCoords - glm::vec2(0.2, 0.3), texCoords + glm::vec2(0.2, 0.3));
 		}
 		else if (std::string(currentTransferRegionSelectMode) == std::string(transferRegionSelectModes[2])) {
-			glm::vec3 color = refereceSpatialTransferFunction(texCoords);
-			transferFunction = refereceSpatialTransferFunction;
+			glm::vec3 color = referenceSpatialTransferFunction(texCoords);
+			transferFunction = referenceSpatialTransferFunction;
 			transferFunction.singleColor(color);
 			transferFunction.blur(3);
 		}
 		else if (std::string(currentTransferRegionSelectMode) == std::string(transferRegionSelectModes[3])) {
-			glm::vec3 color = refereceSpatialTransferFunction(texCoords);
+			glm::vec3 color = referenceSpatialTransferFunction(texCoords);
 			transferFunction.removeColor(color);
 		}
-		boundingGeometry.updateGeometry(*voxels, transferFunction, boundingGeometryTreshold);
+		boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
 	}
+	changed = true;
 }
 
 void VoxelData::resetToSTF()
 {
-	refereceSpatialTransferFunction.spatialTransferFunction(glm::ivec2(256, 128), *voxels, STFradius, STFOpacity, STFEmission);
-	transferFunction = refereceSpatialTransferFunction;
-	boundingGeometry.updateGeometry(*voxels, transferFunction, boundingGeometryTreshold);
+	referenceSpatialTransferFunction.spatialTransferFunction(glm::ivec2(256, 128), *voxelTexture, STFradius, STFOpacity, STFEmission);
+	transferFunction = referenceSpatialTransferFunction;
+	boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
+	changed = true;
 }
 
 void VoxelData::resetToDefault()
 {
 	transferFunction.defaultTransferFunction(glm::ivec2(256, 128));
-	boundingGeometry.updateGeometry(*voxels, transferFunction, boundingGeometryTreshold);
+	boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
+	changed = true;
 }
 
 void VoxelData::mergeVisibleClasses() {
 	transferFunction.grayscale();
 	transferFunction.blur(3);
+	changed = true;
 }
 
 void VoxelData::rotateModelAroundX(float rad) {
 	staticEulerAngles.x += rad;
+	changed = true;
 }
 
 void VoxelData::rotateModelAroundY(float rad) {
 	staticEulerAngles.y += rad;
+	changed = true;
 }
 
 void VoxelData::rotateModelAroundZ(float rad) {
 	staticEulerAngles.z += rad;
+	changed = true;
+}
+
+bool VoxelData::popChanged() {
+	bool prevChanged = changed;
+	changed = false;
+	return prevChanged;
 }

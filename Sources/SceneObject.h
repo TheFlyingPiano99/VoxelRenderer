@@ -3,7 +3,7 @@
 #include "Mesh.h"
 #include "shaderClass.h"
 #include "Camera.h"
-#include "LightSource.h"
+#include "Light.h"
 #include "Animation.h"
 #include "ISceneObject.h"
 
@@ -19,7 +19,6 @@ protected:
 	glm::vec3 position;
 
 	Animation* animation = nullptr;
-	PointLight* light = nullptr;	// NULL if no light source
 
 	glm::mat4 modelMatrix = glm::mat4(1.0f);
 	glm::mat4 invModelMatrix = glm::mat4(1.0f);
@@ -36,17 +35,13 @@ public:
 	~SceneObject() {
 	}
 
-	void updateMatrix();
-
-	void setLight(PointLight* _light) {
-		light = _light;
-	}
+	void update();
 
 	virtual void control(float dt) {}
 
 	virtual void animate(float dt);
 
-	virtual void draw(Camera& camera);
+	virtual void draw(Camera& camera, std::vector<Light>& lights);
 
 	void setMesh(Mesh* _mesh) {
 		mesh = _mesh;
@@ -61,9 +56,6 @@ public:
 
 	void setPosition(glm::vec3 pos) override {
 		position = pos;
-		if (light != nullptr) {
-			light->setPosition(position);
-		}
 	}
 
 	glm::vec3 getPosition() {

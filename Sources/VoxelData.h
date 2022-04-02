@@ -14,15 +14,17 @@
 class VoxelData
 {
 	Shader* shader = nullptr;	// Don't delete!
-	Texture3D* voxels = nullptr;
+	Texture3D* voxelTexture = nullptr;
 
 	VAO* quadVAO;
-	unsigned int enterFBO, exitFBO, lightFBO = 0;
-	unsigned int enterTexture, exitTexture, lightTexture;
+	unsigned int enterFBO, exitFBO = 0;
+	unsigned int enterTexture, exitTexture;
+	unsigned int lightFBOs[16];
+	unsigned int lightTextures[16];
 
 	BoundingGeometry boundingGeometry;
 	TransferFunction transferFunction;
-	TransferFunction refereceSpatialTransferFunction;
+	TransferFunction referenceSpatialTransferFunction;
 
 	glm::vec3 scale;
 	glm::vec3 position;
@@ -38,16 +40,21 @@ class VoxelData
 	float maxAttenuation;
 	Plane plane;
 	float exposure, gamma;
-	Light light1;
 	std::string name;
 	float boundingGeometryTreshold;
 	float transferFloodFillTreshold;
 	float STFradius, STFOpacity, STFEmission;
 
+	float shininess;
+	glm::vec3 specularColor;
+	glm::vec3 ambientColor;
+
 	unsigned int shadowSamples;
 
 	const char* transferRegionSelectModes[TRANSFER_MODE_COUNT] = { "Flood fill", "General area", "Single class", "Remove class"};
 	const char* currentTransferRegionSelectMode = "Single class";
+
+	bool changed = true;
 
 	void exportData();
 
@@ -61,8 +68,8 @@ public :
 	~VoxelData();
 
 	void animate(float dt);
-	void optimize(float dt, bool paused, float cameraLastActive);
-	void draw(Camera& camera);
+	void control(float dt, bool paused, float cameraLastActive);
+	void draw(Camera& camera, std::vector<Light>& lights, unsigned int quadFBO, glm::vec2 scale, glm::vec2 offse, float depthLimit);
 
 	void shiftIntersectionPlane(float delta);
 	void rotateIntersectionPlane(float rad);
@@ -103,11 +110,11 @@ public :
 	}
 
 	float& getReferenceTransferFunctionExposure() {
-		return refereceSpatialTransferFunction.getExposure();
+		return referenceSpatialTransferFunction.getExposure();
 	}
 
 	float& getReferenceTransferFunctionGamma() {
-		return refereceSpatialTransferFunction.getGamma();
+		return referenceSpatialTransferFunction.getGamma();
 	}
 
 	void onContextResize(int width, int height) {
@@ -125,6 +132,10 @@ public :
 		return STFEmission;
 	}
 
+	glm::vec3 getPosition() {
+		return position;
+	}
+
 	void mergeVisibleClasses();
 
 	void rotateModelAroundX(float rad);
@@ -132,5 +143,8 @@ public :
 	void rotateModelAroundY(float rad);
 
 	void rotateModelAroundZ(float rad);
+
+	bool popChanged();
+
 };
 

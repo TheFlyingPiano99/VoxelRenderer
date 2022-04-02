@@ -15,14 +15,16 @@ public:
 	glm::vec3 eye;
 	glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::vec3 prefUp = glm::vec3(0.0f, 1.0f, 0.0f);
-	glm::mat4 cameraMatrix = glm::mat4(1.0f);
-	glm::mat4 invCameraMatrix = glm::mat4(1.0f);
+	glm::mat4 viewProjMatrix = glm::mat4(1.0f);
+	glm::mat4 invViewProjMatrix = glm::mat4(1.0f);
 	float FOVdeg = 45.0f;
 	float nearPlane = 2.0f;
 	float farPlane = 2000.0f;
 
 	// Prevents the camera from jumping around when first clicking left click
 	bool firstClick = true;
+
+	bool moved = false;
 
 	// Stores the width and height of the window
 	int width;
@@ -37,7 +39,7 @@ public:
 	Camera(int width, int height, glm::vec3 eye, glm::vec3 center);
 
 	// Updates the camera matrix to the Vertex Shader
-	void updateMatrix();
+	bool update();
 
 	void updateOrientation(glm::vec3 prefUp);
 	// Exports the camera matrix to a shader

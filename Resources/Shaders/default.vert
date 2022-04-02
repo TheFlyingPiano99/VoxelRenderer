@@ -21,6 +21,7 @@ out vec2 texCoord;
 
 
 struct Camera {
+	vec3 position;
 	mat4 viewProjMatrix;
 	mat4 invViewProjMatrix;
 };
