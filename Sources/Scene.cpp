@@ -198,23 +198,11 @@ void Scene::initMeshesShadersObjects()
 
 void Scene::initQuadFBO()
 {
-	if (quadFBO > 0) {	// Not the first call
-		glDeleteFramebuffers(1, &quadFBO);
-		glDeleteTextures(1, &quadTexture);
+	if (quadTexture != nullptr) {	// If not the first call
+		delete quadTexture;
 	}
-
-	glGenFramebuffers(1, &quadFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, quadFBO);
-
-	glGenTextures(1, &quadTexture);
-	glBindTexture(GL_TEXTURE_2D, quadTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, contextWidth, contextHeight, 0, GL_RGBA, GL_FLOAT, NULL);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, quadTexture, 0);
+	quadTexture = new Texture2D(GL_RGBA, glm::vec2(contextWidth, contextHeight), 0, GL_RGBA, GL_FLOAT);
+	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *quadTexture, 0);
 }
 
 
@@ -317,7 +305,7 @@ void Scene::draw()
 	}
 
 	if (partToDraw >= 0) {
-		glBindFramebuffer(GL_FRAMEBUFFER, quadFBO);
+		quadFBO.Bind();
 		glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -339,8 +327,7 @@ void Scene::draw()
 	quadVAO.Bind();
 	glUniform2f(glGetUniformLocation(quadShader->ID, "scale"), 1.0f, 1.0f);
 	glUniform2f(glGetUniformLocation(quadShader->ID, "offset"), 0.0f, 0.0f);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, quadTexture);
+	quadTexture->Bind();
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	glDrawArrays(GL_TRIANGLES, 0, 6);

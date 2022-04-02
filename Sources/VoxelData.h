@@ -8,6 +8,7 @@
 #include "BoundingGeometry.h"
 #include "Light.h"
 #include "TransferFunction.h"
+#include "FBO.h"
 
 #define TRANSFER_MODE_COUNT 4
 
@@ -17,10 +18,11 @@ class VoxelData
 	Texture3D* voxelTexture = nullptr;
 
 	VAO* quadVAO;
-	unsigned int enterFBO, exitFBO = 0;
-	unsigned int enterTexture, exitTexture;
-	unsigned int lightFBOs[16];
-	unsigned int lightTextures[16];
+	FBO enterFBO, exitFBO;
+	Texture2D* enterTexture = nullptr;
+	Texture2D* exitTexture = nullptr;
+	FBO lightFBOs[16];
+	Texture2D* lightTextures[16] = {nullptr};
 
 	BoundingGeometry boundingGeometry;
 	TransferFunction transferFunction;
@@ -69,7 +71,7 @@ public :
 
 	void animate(float dt);
 	void control(float dt, bool paused, float cameraLastActive);
-	void draw(Camera& camera, std::vector<Light>& lights, unsigned int quadFBO, glm::vec2 scale, glm::vec2 offse, float depthLimit);
+	void draw(Camera& camera, std::vector<Light>& lights, FBO& quadFBO, glm::vec2 scale, glm::vec2 offse, float depthLimit);
 
 	void shiftIntersectionPlane(float delta);
 	void rotateIntersectionPlane(float rad);

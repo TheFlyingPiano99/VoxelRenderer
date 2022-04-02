@@ -94,18 +94,9 @@ vec4 resampleGradientAndDensity(vec3 position, float intensity)
 vec3 calculateLightLevel(vec3 modelPos, vec3 diffuseColor, vec3 specularColor, float shininess, Light light, vec3 gradient, vec3 modelEyePos) {
 	vec4 lightCameraSpaceCoord = light.viewProjMatrix * modelMatrix * vec4(modelPos, 1);
 	vec2 tex = (lightCameraSpaceCoord.xy / lightCameraSpaceCoord.w + vec2(1, 1)) / vec2(2.0, 2.0);
-	
-	/*
-	if (tex.y > 0.5) {
-		if (tex.x < 0.5) {
-			return	vec3(0, 10, 0);
-		}
-		return	vec3(10, 0, 0);
-	}
-	*/
-	
 	vec3 lightBeamEndPos = texture(lightExitTexture0, tex).xyz;
 	float distanceToBeamEndPos = length(lightBeamEndPos - modelPos);
+
 	float delta = distanceToBeamEndPos / float(shadowSamples + 1);
 	float distanceTravelled = delta;
 	vec3 lightSourceModelPos = vec4(invModelMatrix * light.position).xyz;

@@ -5,6 +5,7 @@
 #include "Light.h"
 #include "Texture2D.h"
 #include "TransferFunction.h"
+#include "FBO.h"
 
 class BoundingGeometry
 {
@@ -46,6 +47,6 @@ public:
 
 	void updateGeometry(Texture3D& voxelTexture, TransferFunction& transferFunction, float threshold);
 
-	void draw(Camera& camera, std::vector<Light>& lights, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, unsigned int enterFBO, unsigned int exitFBO, unsigned int lightFBOs[16]);
+	void draw(Camera& camera, std::vector<Light>& lights, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, FBO& enterFBO, FBO& exitFBO, FBO* lightFBOs);
 };
 

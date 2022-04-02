@@ -34,7 +34,8 @@ class Scene
 	int partToDraw = -1;
 	int noOfPartsToDraw = 16;
 
-	unsigned int quadFBO, quadTexture = 0;
+	FBO quadFBO;
+	Texture2D* quadTexture = nullptr;
 	Shader* quadShader = nullptr;
 
 	Scene(unsigned int contextWidth, unsigned int contextHeight) : contextWidth(contextWidth), contextHeight(contextHeight) {

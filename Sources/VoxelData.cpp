@@ -70,72 +70,32 @@ bool VoxelData::readDimensions(const char* path, std::string& name, Dimensions& 
 
 void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 {
-	if (enterFBO > 0) {	// Not the first call
-		glDeleteFramebuffers(1, &enterFBO);
-		glDeleteFramebuffers(1, &exitFBO);
+	if (enterTexture != nullptr) {	// Not the first call
+		delete enterTexture;
+		delete exitTexture;
 		for (int i = 0; i < 16; i++) {
-			glDeleteFramebuffers(1, &(lightFBOs[i]));
+			delete lightTextures[i];
 		}
 	}
 
-	// Enter FBO
-	glGenFramebuffers(1, &enterFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, enterFBO);
+	RBO enterExitRbo(GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
 
-	glGenTextures(1, &enterTexture);
-	glBindTexture(GL_TEXTURE_2D, enterTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, contextWidth, contextHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	enterTexture = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 2, GL_RGBA, GL_UNSIGNED_BYTE);
+	enterFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *enterTexture, 0);
+	enterFBO.LinkRBO(GL_DEPTH_ATTACHMENT, enterExitRbo);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, enterTexture, 0);
+	exitTexture = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 3, GL_RGBA, GL_UNSIGNED_BYTE);
+	exitFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *exitTexture, 0);
+	exitFBO.LinkRBO(GL_DEPTH_ATTACHMENT, enterExitRbo);
 
-	unsigned int rbo;
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-	// Exit FBO
-	glGenFramebuffers(1, &exitFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, exitFBO);
-
-	glGenTextures(1, &exitTexture);
-	glBindTexture(GL_TEXTURE_2D, exitTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, contextWidth, contextHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, exitTexture, 0);
-
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);	// The same render buffer to both exit and enter FBOs.
-
-	//Lights
 	for (int i = 0; i < 16; i++) {
-		glGenFramebuffers(1, &(lightFBOs[i]));
-		glBindFramebuffer(GL_FRAMEBUFFER, lightFBOs[i]);
+		lightTextures[i] = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 4 + i, GL_RGBA, GL_UNSIGNED_BYTE);
+		lightFBOs[i].LinkTexture(GL_COLOR_ATTACHMENT0, *lightTextures[i], 0);
 
-		glGenTextures(1, &(lightTextures[i]));
-		glBindTexture(GL_TEXTURE_2D, lightTextures[i]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, contextWidth, contextHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightTextures[i], 0);
-
-		glGenRenderbuffers(1, &rbo);
-		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+		RBO lightRbo(GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
+		lightFBOs[i].LinkRBO(GL_DEPTH_ATTACHMENT, lightRbo);
 	}
 }
-
 
 VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
 		: shader(_shader),
@@ -204,9 +164,8 @@ void VoxelData::control(float dt, bool paused, float cameraLastActive) {
 }
 
 
-void VoxelData::draw(Camera& camera, std::vector<Light>& lights, unsigned int quadFBO, glm::vec2 scale, glm::vec2 offset, float depthLimit) {
+void VoxelData::draw(Camera& camera, std::vector<Light>& lights, FBO& quadFBO, glm::vec2 scale, glm::vec2 offset, float depthLimit) {
 	for (int i = 0; i < lights.size(); i++) {
-		
 		glm::vec3 lightPos(lights[i].position.x, lights[i].position.y, lights[i].position.z);
 		float w = lights[i].position.w;
 		glm::vec3 eye(lightPos + lightPos * (300.0f - 300.0f * w));
@@ -216,7 +175,7 @@ void VoxelData::draw(Camera& camera, std::vector<Light>& lights, unsigned int qu
 	}
 	boundingGeometry.draw(camera, lights, modelMatrix, invModelMatrix, enterFBO, exitFBO, lightFBOs);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, quadFBO);
+	quadFBO.Bind();
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -234,22 +193,19 @@ void VoxelData::draw(Camera& camera, std::vector<Light>& lights, unsigned int qu
 
 	voxelTexture->Bind();
 	transferFunction.Bind();
-
-	glActiveTexture(GL_TEXTURE0 + 2);
-	glBindTexture(GL_TEXTURE_2D, enterTexture);
-
-	glActiveTexture(GL_TEXTURE0 + 3);
-	glBindTexture(GL_TEXTURE_2D, exitTexture);
+	enterTexture->Bind();
+	exitTexture->Bind();
 
 	for (int i = 0; i < lights.size(); i++) {
-		glActiveTexture(GL_TEXTURE0 + 4 + i);
-		glBindTexture(GL_TEXTURE_2D, lightTextures[i]);
+		lightTextures[i]->Bind();
 	}
-	
+
+	/*
 	glUniform1i(glGetUniformLocation(shader->ID, "voxels"), voxelTexture->unit);
 	glUniform1i(glGetUniformLocation(shader->ID, "colorAttenuationTransfer"), 1);
 	glUniform1i(glGetUniformLocation(shader->ID, "enterTexture"), 2);
 	glUniform1i(glGetUniformLocation(shader->ID, "exitTexture"), 3);
+	*/
 	
 	/*
 	for (int i = 0; i < lights.size(); i++) {	// Setting unirom binding of light textures
@@ -265,6 +221,9 @@ void VoxelData::draw(Camera& camera, std::vector<Light>& lights, unsigned int qu
 	glEnable(GL_CULL_FACE);
 	voxelTexture->Unbind();
 	transferFunction.Unbind();
+	enterTexture->Unbind();
+	exitTexture->Unbind();
+
 	transferFunction.draw();
 	referenceSpatialTransferFunction.draw();
 }
