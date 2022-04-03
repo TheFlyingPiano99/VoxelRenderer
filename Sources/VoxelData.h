@@ -76,7 +76,7 @@ class VoxelData
 	void updateMatrices();
 
 public :
-	VoxelData(Shader* _shader, Shader* quadShader, Shader* boundingShader, Shader* transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight);
+	VoxelData(Shader* _shader, Shader* quadShader, Shader* boundingShader, Shader* _flatColorBoundingShader, Shader* transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight);
 	~VoxelData();
 
 	void animate(float dt);
@@ -84,6 +84,7 @@ public :
 	void drawLayer(Camera& camera, std::vector<Light>& lights, glm::vec2 scale, glm::vec2 offse, unsigned int currentStep, unsigned int stepCount);
 	void drawQuad();
 	void drawBoundingGeometry(Camera& camera, std::vector<Light>& lights);
+	void drawBoundingGeometryOnScreen(Camera& camera, float opacity);
 	void drawTransferFunction();
 	void resetOpacity();
 

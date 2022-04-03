@@ -325,5 +325,8 @@
     <None Include="..\Resources\Shaders\quad.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
+    <None Include="..\Resources\Shaders\flatColor.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

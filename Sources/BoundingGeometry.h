@@ -9,11 +9,13 @@
 
 class BoundingGeometry
 {
-	Shader* shader;
+	Shader* modelPosShader = nullptr;
+	Shader* flatColorShader = nullptr;
 	VAO VAO;
 	std::vector<glm::vec3> vertices;
 	std::vector<GLuint> indices;
 	float threshold;
+	glm::vec4 flatColor;
 
 	void addCuboid(glm::vec3 scale, glm::vec3 translation);
 	void calculateDivision(const Dimensions& dimensions, unsigned int& xDivision, unsigned int& yDivision, unsigned int& zDivision);
@@ -38,8 +40,8 @@ class BoundingGeometry
 	unsigned int indexDivisionSized(const int x, const int y, const int z, const unsigned int& xDivision, const unsigned int& yDivision, const unsigned int& zDivision);
 
 public:
-	BoundingGeometry(Shader* _shader)
-		: shader(_shader), threshold(0.01f) {
+	BoundingGeometry(Shader* _modelPosShader, Shader* _flatColorShader)
+		: modelPosShader(_modelPosShader), flatColorShader(_flatColorShader), threshold(0.01f) {
 	}
 	~BoundingGeometry() {
 		VAO.Delete();
@@ -48,5 +50,6 @@ public:
 	void updateGeometry(Texture3D& voxelTexture, TransferFunction& transferFunction, float threshold);
 
 	void draw(Camera& camera, std::vector<Light>& lights, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, FBO& enterFBO, FBO& exitFBO, FBO* lightFBOs);
+	void drawOnScreen(Camera& camera, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, float opacity);
 };
 

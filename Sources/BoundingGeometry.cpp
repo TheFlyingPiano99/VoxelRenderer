@@ -194,9 +194,13 @@ void BoundingGeometry::calculateFilled(const Dimensions& dimensions,
 			for (int x = 0; x < dimensions.width; x++) {
 				glm::vec4 gradientIntensity = voxelTexture.resampleGradientAndDensity(glm::ivec3(x, y, z));
 				float gradientLength = glm::length(glm::vec3(gradientIntensity.x, gradientIntensity.y, gradientIntensity.z));
-				float intensity = gradientIntensity.w;
-				float opacity = transferFunction(glm::vec2(intensity, gradientLength)).w;
-					averageOpacity[indexDivisionSized((x / xBlockSize), (y / yBlockSize), (z / zBlockSize), xDivision, yDivision, zDivision)]
+				float intensity = gradientIntensity.a;
+				glm::vec4 colorOpacity = transferFunction(glm::vec2(intensity, gradientLength));
+				float opacity = colorOpacity.w;
+				flatColor.r += colorOpacity.r;
+				flatColor.g += colorOpacity.g;
+				flatColor.b += colorOpacity.b;
+				averageOpacity[indexDivisionSized((x / xBlockSize), (y / yBlockSize), (z / zBlockSize), xDivision, yDivision, zDivision)]
 					+= opacity / (float)voxelsPerBlock;
 			}
 		}
@@ -262,7 +266,9 @@ void BoundingGeometry::updateGeometry(Texture3D& voxelTexture, TransferFunction&
 		isFilled,
 		voxelTexture,
 		transferFunction);
-
+	flatColor.a = 0.0f;
+	flatColor = normalize(flatColor);
+	flatColor.a = 1.0f;
 	createVertexGrid(dimensions, xDivision, yDivision, zDivision);
 	createIndices(xDivision, yDivision, zDivision, isFilled);
 
@@ -278,10 +284,10 @@ void BoundingGeometry::updateGeometry(Texture3D& voxelTexture, TransferFunction&
 
 void BoundingGeometry::draw(Camera& camera, std::vector<Light>& lights, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, FBO& enterFBO, FBO& exitFBO, FBO* lightFBOs)
 {
-	shader->Activate();
+	modelPosShader->Activate();
 	VAO.Bind();
-	camera.exportMatrix(*shader);
-	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "sceneObject.modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	camera.exportMatrix(*modelPosShader);
+	glUniformMatrix4fv(glGetUniformLocation(modelPosShader->ID, "sceneObject.modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
 	glm::vec4 modelSpaceCameraPos = invModelMatrix * glm::vec4(camera.eye, 1.0f);
 	modelSpaceCameraPos = modelSpaceCameraPos / modelSpaceCameraPos.w;
@@ -314,7 +320,27 @@ void BoundingGeometry::draw(Camera& camera, std::vector<Light>& lights, glm::mat
 		glDisable(GL_CULL_FACE);
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LESS);
-		glUniformMatrix4fv(glGetUniformLocation(shader->ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(lights[i].viewProjMatrix));
+		glUniformMatrix4fv(glGetUniformLocation(modelPosShader->ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(lights[i].viewProjMatrix));
 		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 	}
+}
+
+void BoundingGeometry::drawOnScreen(Camera& camera, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, float opacity)
+{
+	FBO::BindDefault();
+	flatColorShader->Activate();
+	VAO.Bind();
+	glDisable(GL_DEPTH);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	camera.exportMatrix(*flatColorShader);
+	glUniformMatrix4fv(glGetUniformLocation(flatColorShader->ID, "sceneObject.modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	glUniform4f(glGetUniformLocation(flatColorShader->ID, "color"), flatColor.r, flatColor.g, flatColor.b, opacity);
+	glm::vec4 modelSpaceCameraPos = invModelMatrix * glm::vec4(camera.eye, 1.0f);
+	modelSpaceCameraPos = modelSpaceCameraPos / modelSpaceCameraPos.w;
+	glUniform3f(glGetUniformLocation(flatColorShader->ID, "modelEye"), modelSpaceCameraPos.x, modelSpaceCameraPos.y, modelSpaceCameraPos.z);
+
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 }

@@ -172,6 +172,10 @@ void Scene::initMeshesShadersObjects()
 		AssetManager::getInstance()->getShaderFolderPath().append("bounding.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("bounding.frag").c_str()
 	);
+	Shader* flatColorBoundingShader = new Shader(
+		AssetManager::getInstance()->getShaderFolderPath().append("bounding.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("flatColor.frag").c_str()
+	);
 	Shader* transferShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("transfer.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("transfer.frag").c_str()
@@ -179,6 +183,7 @@ void Scene::initMeshesShadersObjects()
 	shaders.push_back(voxelShader);
 	shaders.push_back(quadShader);
 	shaders.push_back(boundingShader);
+	shaders.push_back(flatColorBoundingShader);
 	shaders.push_back(transferShader);
 
 
@@ -193,7 +198,7 @@ void Scene::initMeshesShadersObjects()
 	if (selection > 2 || selection < 0) {
 		selection = 0;
 	}
-	voxels = new VoxelData(voxelShader, quadShader, boundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
+	voxels = new VoxelData(voxelShader, quadShader, boundingShader, flatColorBoundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
 }
 
 
@@ -290,11 +295,13 @@ void Scene::draw()
 
 	bool cameraMoved = camera->update();
 
+	FBO::BindDefault();
+	glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
+	glClearDepth(1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	if (cameraMoved || voxels->popChanged()) {
 		partToDraw = 0;
-		FBO::BindDefault();
-		glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		for (auto obj : sceneObjects) {
 			obj->draw(*camera, lights);
@@ -309,6 +316,9 @@ void Scene::draw()
 		if (partToDraw == noOfPartsToDraw) {
 			partToDraw = -1;
 		}
+	}
+	if (partToDraw >= 0) {
+		voxels->drawBoundingGeometryOnScreen(*camera, (1.0f - std::powf(partToDraw / (float)noOfPartsToDraw, 0.2f)) * 0.3f);
 	}
 	voxels->drawQuad();
 	voxels->drawTransferFunction();

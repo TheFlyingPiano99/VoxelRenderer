@@ -95,7 +95,7 @@ void Callbacks::onMouseMove(GLFWwindow* window, double xpos, double ypos)
 
 void Callbacks::onMouseScroll(GLFWwindow* window, double xoffset, double yoffset)
 {
-	Scene::getInstance()->getCamera()->approachCenter(yoffset);
+	Scene::getInstance()->getCamera()->approachCenter(-yoffset);
 }
 
 void Callbacks::onMouseClick(GLFWwindow* window, int button, int action, int mods)

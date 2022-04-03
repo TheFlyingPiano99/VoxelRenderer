@@ -111,7 +111,7 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *quadTexture, 0);
 }
 
-VoxelData::VoxelData(Shader* _voxelShader, Shader* quadShader, Shader* _boundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
+VoxelData::VoxelData(Shader* _voxelShader, Shader* quadShader, Shader* _boundingShader, Shader* _flatColorBoundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
 		: voxelShader(_voxelShader),
 	quadShader(quadShader),
 	maxIntensity(255),
@@ -119,7 +119,7 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* quadShader, Shader* _bounding
 	plane(glm::vec3(100,100,50), glm::vec3(0,0,1)),
 	exposure(1.1f),
 	gamma(0.98f),
-	boundingGeometry(_boundingShader),
+	boundingGeometry(_boundingShader, _flatColorBoundingShader),
 	transferFunction(_transferShader, quadVAO),
 	referenceSpatialTransferFunction(_transferShader, quadVAO),
 	scale(1.0f, 1.0f, 1.0f),
@@ -128,7 +128,7 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* quadShader, Shader* _bounding
 	up(0.0f, 1.0f, 0.0f),
 	animationEulerAngles(0.0f, 0.0f, 0.0f),
 	staticEulerAngles(0.0f, 0.0f, 0.0f),
-	shadowSamples(2),
+	shadowSamples(10),
 	quadVAO(quadVAO),
 	boundingGeometryTreshold(0.006f),
 	transferFloodFillTreshold(4.0f),
@@ -216,6 +216,11 @@ void VoxelData::resetOpacity()
 	quadFBO.Bind();
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void VoxelData::drawBoundingGeometryOnScreen(Camera& camera, float opacity)
+{
+	boundingGeometry.drawOnScreen(camera, modelMatrix, invModelMatrix, opacity);
 }
 
 void VoxelData::drawTransferFunction() {
