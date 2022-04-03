@@ -13,7 +13,10 @@ class Texture2D
 	std::vector<glm::vec4> bytes;
 	glm::ivec2 dimensions;
 	glm::vec4 nullVector;
+
 public:
+	friend class FBO;
+
 	GLuint ID;
 	GLuint unit;
 	const char* type;

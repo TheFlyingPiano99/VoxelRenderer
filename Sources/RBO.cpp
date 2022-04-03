@@ -1,5 +1,6 @@
 #include "RBO.h"
 
+
 RBO::RBO(GLenum internalformat, GLsizei width, GLsizei height)
 {
 	glGenRenderbuffers(1, &ID);

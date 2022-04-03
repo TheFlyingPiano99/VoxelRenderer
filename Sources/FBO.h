@@ -7,14 +7,12 @@ class FBO
 {
 public:
 	GLuint ID;
+	glm::ivec4 viewport;
 
 	FBO();
 
-	// Binds the VAO
 	void Bind();
-	// Unbinds the VAO
 	void Unbind();
-	// Deletes the VAO
 	void Delete();
 
 	void LinkTexture(GLenum attachment, Texture2D& texture, GLint level);
