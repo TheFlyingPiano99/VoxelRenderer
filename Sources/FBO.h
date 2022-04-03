@@ -20,5 +20,7 @@ public:
 	void LinkTexture(GLenum attachment, Texture2D& texture, GLint level);
 
 	void LinkRBO(GLenum attachment, RBO& rbo);
+
+	static void BindDefault();
 };
 

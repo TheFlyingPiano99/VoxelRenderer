@@ -4,7 +4,6 @@
 #include<glm/glm.hpp>
 #include "SceneObject.h"
 #include "Light.h"
-#include "PostprocessUnit.h"
 #include "Camera.h"
 #include "Stars.h"
 #include "VoxelData.h"
@@ -32,11 +31,7 @@ class Scene
 	float cameraLastActive = 1000.0f;
 	unsigned int contextWidth, contextHeight;
 	int partToDraw = -1;
-	int noOfPartsToDraw = 16;
-
-	FBO quadFBO;
-	Texture2D* quadTexture = nullptr;
-	Shader* quadShader = nullptr;
+	int noOfPartsToDraw = 256;
 
 	Scene(unsigned int contextWidth, unsigned int contextHeight) : contextWidth(contextWidth), contextHeight(contextHeight) {
 	}
@@ -46,7 +41,6 @@ class Scene
 	void initInfinitePlane();
 	void initCamera();
 	void initMeshesShadersObjects();
-	void initQuadFBO();
 
 public:
 	~Scene() {
@@ -65,8 +59,6 @@ public:
 
 	void togglePause();
 	void toggleGravitation();
-
-	PostprocessUnit* getPostprocessUnit();
 
 	Camera* getCamera();
 

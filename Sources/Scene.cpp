@@ -164,7 +164,7 @@ void Scene::initMeshesShadersObjects()
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("voxel.frag").c_str()
 	);
-	quadShader = new Shader(
+	Shader* quadShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.frag").c_str()
 	);
@@ -193,16 +193,7 @@ void Scene::initMeshesShadersObjects()
 	if (selection > 2 || selection < 0) {
 		selection = 0;
 	}
-	voxels = new VoxelData(voxelShader, boundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
-}
-
-void Scene::initQuadFBO()
-{
-	if (quadTexture != nullptr) {	// If not the first call
-		delete quadTexture;
-	}
-	quadTexture = new Texture2D(GL_RGBA, glm::vec2(contextWidth, contextHeight), 0, GL_RGBA, GL_FLOAT);
-	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *quadTexture, 0);
+	voxels = new VoxelData(voxelShader, quadShader, boundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
 }
 
 
@@ -229,7 +220,6 @@ void Scene::init(int contextWidth, int contextHeight)
 	this->contextHeight = contextHeight;
 	initQuad();
 	//initInfinitePlane();
-	initQuadFBO();
 	initCamera();
 	initMeshesShadersObjects();
 }
@@ -302,36 +292,26 @@ void Scene::draw()
 
 	if (cameraMoved || voxels->popChanged()) {
 		partToDraw = 0;
-	}
-
-	if (partToDraw >= 0) {
-		quadFBO.Bind();
+		FBO::BindDefault();
 		glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		for (auto obj : sceneObjects) {
 			obj->draw(*camera, lights);
 		}
+		voxels->drawBoundingGeometry(*camera, lights);
+		voxels->resetOpacity();
+	}
 
-		voxels->draw(*camera, lights, quadFBO, glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 0.0f), (partToDraw + 1) / (float)noOfPartsToDraw);
+	if (partToDraw >= 0) {
+		voxels->drawLayer(*camera, lights, glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 0.0f), partToDraw, noOfPartsToDraw);
 		partToDraw++;
-		
 		if (partToDraw == noOfPartsToDraw) {
 			partToDraw = -1;
 		}
 	}
-
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	quadShader->Activate();
-	quadVAO.Bind();
-	glUniform2f(glGetUniformLocation(quadShader->ID, "scale"), 1.0f, 1.0f);
-	glUniform2f(glGetUniformLocation(quadShader->ID, "offset"), 0.0f, 0.0f);
-	quadTexture->Bind();
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	
+	voxels->drawQuad();
+	voxels->drawTransferFunction();
 }
 
 void Scene::togglePause()
@@ -362,7 +342,6 @@ void Scene::onContextResize(int contextWidth, int contextHeight)
 		camera->width = contextWidth;
 		camera->height = contextHeight;
 	}
-	initQuadFBO();
 	if (voxels != nullptr) {
 		voxels->onContextResize(contextWidth, contextHeight);
 	}

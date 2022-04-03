@@ -31,3 +31,8 @@ void FBO::LinkRBO(GLenum attachment, RBO& rbo)
 	Bind();
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, rbo.ID);
 }
+
+void FBO::BindDefault()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}

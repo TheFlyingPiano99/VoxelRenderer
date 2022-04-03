@@ -8,16 +8,14 @@
 void VoxelData::exportData()
 {
 	Dimensions dim = voxelTexture->getDimensions();
-	glUniform3f(glGetUniformLocation(shader->ID, "resolution"),
+	glUniform3f(glGetUniformLocation(voxelShader->ID, "resolution"),
 		dim.width , dim.height, dim.depth);
-	glUniform1f(glGetUniformLocation(shader->ID, "exposure"), exposure);
-	glUniform1f(glGetUniformLocation(shader->ID, "gamma"), gamma);
-	glUniform1f(glGetUniformLocation(shader->ID, "shininess"), shininess);
-	glUniform3f(glGetUniformLocation(shader->ID, "specularColor"), specularColor.r, specularColor.g, specularColor.b);
-	glUniform3f(glGetUniformLocation(shader->ID, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
-	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
-	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
-	glUniform1ui(glGetUniformLocation(shader->ID, "shadowSamples"), shadowSamples);
+	glUniform1f(glGetUniformLocation(voxelShader->ID, "shininess"), shininess);
+	glUniform3f(glGetUniformLocation(voxelShader->ID, "specularColor"), specularColor.r, specularColor.g, specularColor.b);
+	glUniform3f(glGetUniformLocation(voxelShader->ID, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
+	glUniformMatrix4fv(glGetUniformLocation(voxelShader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(voxelShader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
+	glUniform1ui(glGetUniformLocation(voxelShader->ID, "shadowSamples"), shadowSamples);
 }
 
 bool VoxelData::readDimensions(const char* path, std::string& name, Dimensions& dimensions)
@@ -73,32 +71,49 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 	if (enterTexture != nullptr) {	// Not the first call
 		delete enterTexture;
 		delete exitTexture;
-		for (int i = 0; i < 16; i++) {
+		for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
 			delete lightTextures[i];
 		}
+		delete opacityTextures[0];
+		delete opacityTextures[1];
+		delete quadTexture;
 	}
 
 	RBO enterExitRbo(GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
 
+	// Enter:
 	enterTexture = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 2, GL_RGBA, GL_UNSIGNED_BYTE);
 	enterFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *enterTexture, 0);
 	enterFBO.LinkRBO(GL_DEPTH_ATTACHMENT, enterExitRbo);
 
+	// Exit:
 	exitTexture = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 3, GL_RGBA, GL_UNSIGNED_BYTE);
 	exitFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *exitTexture, 0);
 	exitFBO.LinkRBO(GL_DEPTH_ATTACHMENT, enterExitRbo);
 
-	for (int i = 0; i < 16; i++) {
-		lightTextures[i] = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 4 + i, GL_RGBA, GL_UNSIGNED_BYTE);
+	// Opacity:
+	opacityTextures[0] = new Texture2D(GL_RGBA, glm::vec2(contextWidth, contextHeight), 4, GL_RGBA, GL_FLOAT);
+	opacityFBOs[0].LinkTexture(GL_COLOR_ATTACHMENT0, *opacityTextures[0], 0);
+	opacityTextures[1] = new Texture2D(GL_RGBA, glm::vec2(contextWidth, contextHeight), 4, GL_RGBA, GL_FLOAT);
+	opacityFBOs[1].LinkTexture(GL_COLOR_ATTACHMENT0, *opacityTextures[1], 0);
+
+	// Lights:
+	for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
+		lightTextures[i] = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 5 + i, GL_RGBA, GL_UNSIGNED_BYTE);
 		lightFBOs[i].LinkTexture(GL_COLOR_ATTACHMENT0, *lightTextures[i], 0);
 
 		RBO lightRbo(GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
 		lightFBOs[i].LinkRBO(GL_DEPTH_ATTACHMENT, lightRbo);
 	}
+
+	// Quad:
+	quadTexture = new Texture2D(GL_RGBA, glm::vec2(contextWidth, contextHeight), 0, GL_RGBA, GL_FLOAT);
+	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *quadTexture, 0);
 }
 
-VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
-		: shader(_shader),
+VoxelData::VoxelData(Shader* _voxelShader, Shader* quadShader, Shader* _boundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
+		: voxelShader(_voxelShader),
+	quadShader(quadShader),
 	maxIntensity(255),
 	maxAttenuation(255),
 	plane(glm::vec3(100,100,50), glm::vec3(0,0,1)),
@@ -146,25 +161,39 @@ VoxelData::VoxelData(Shader* _shader, Shader* _boundingShader, Shader* _transfer
 }
 
 VoxelData::~VoxelData() {
-	voxelTexture->Delete();
 	delete voxelTexture;
+	if (enterTexture != nullptr) {
+		delete enterTexture;
+	}
+	if (exitTexture != nullptr) {
+		delete exitTexture;
+	}
+	for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
+		if (lightTextures[i] != nullptr) {
+			delete lightTextures[i];
+		}
+	}
+	enterFBO.Delete();
+	exitFBO.Delete();
+	for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
+
+	}
 
 }
 
 void VoxelData::animate(float dt)
 {
-//	glm::mat4 M = glm::rotate(dt * 0.001f, up);
-//	normal = M * glm::vec4(normal, 0);
-	animationEulerAngles.y += dt * 0.0001;
-	updateMatrices();
-	changed = true;
+	if (animation != nullptr) {
+		animationEulerAngles.y += dt * 0.0001;
+		updateMatrices();
+		changed = true;
+	}
 }
 
 void VoxelData::control(float dt, bool paused, float cameraLastActive) {
 }
 
-
-void VoxelData::draw(Camera& camera, std::vector<Light>& lights, FBO& quadFBO, glm::vec2 scale, glm::vec2 offset, float depthLimit) {
+void VoxelData::drawBoundingGeometry(Camera& camera, std::vector<Light>& lights) {
 	for (int i = 0; i < lights.size(); i++) {
 		glm::vec3 lightPos(lights[i].position.x, lights[i].position.y, lights[i].position.z);
 		float w = lights[i].position.w;
@@ -174,58 +203,95 @@ void VoxelData::draw(Camera& camera, std::vector<Light>& lights, FBO& quadFBO, g
 		lights[i].viewProjMatrix = projection * view;
 	}
 	boundingGeometry.draw(camera, lights, modelMatrix, invModelMatrix, enterFBO, exitFBO, lightFBOs);
+}
 
+void VoxelData::resetOpacity()
+{
+	opacityFBOs[0].Bind();
+	glClearColor(1, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	opacityFBOs[1].Bind();
+	glClearColor(1, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	quadFBO.Bind();
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void VoxelData::drawTransferFunction() {
+	FBO::BindDefault();
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
+	transferFunction.draw();
+	referenceSpatialTransferFunction.draw();
+}
+
+
+void VoxelData::drawLayer(Camera& camera, std::vector<Light>& lights, glm::vec2 scale, glm::vec2 offset, unsigned int currentStep, unsigned int stepCount) {
 	quadFBO.Bind();
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_ONE, GL_ONE);
 	quadVAO->Bind();
-	shader->Activate();
+	voxelShader->Activate();
 	this->exportData();
-	camera.exportData(*shader);
+	camera.exportData(*voxelShader);
 	for (int i = 0; i < lights.size(); i++) {
-		lights[i].exportData(*shader, i);
+		lights[i].exportData(*voxelShader, i);
 	}
-	glUniform1ui(glGetUniformLocation(shader->ID, "lightCount"), lights.size());
-	glUniform1f(glGetUniformLocation(shader->ID, "depthLimit"), depthLimit);
 
+	unsigned int source = currentStep % 2;
+	unsigned int target = (currentStep + 1) % 2;
+	float depth = (currentStep + 1.0f) / (float)stepCount;
+
+	glUniform1ui(glGetUniformLocation(voxelShader->ID, "lightCount"), lights.size());
+	glUniform1f(glGetUniformLocation(voxelShader->ID, "opacityMode"), false);
+	glUniform1f(glGetUniformLocation(voxelShader->ID, "depth"), depth);
+	glUniform1ui(glGetUniformLocation(voxelShader->ID, "stepCount"), stepCount);
 
 	voxelTexture->Bind();
 	transferFunction.Bind();
 	enterTexture->Bind();
 	exitTexture->Bind();
-
+	opacityTextures[source]->Bind();
 	for (int i = 0; i < lights.size(); i++) {
 		lightTextures[i]->Bind();
 	}
 
-	/*
-	glUniform1i(glGetUniformLocation(shader->ID, "voxels"), voxelTexture->unit);
-	glUniform1i(glGetUniformLocation(shader->ID, "colorAttenuationTransfer"), 1);
-	glUniform1i(glGetUniformLocation(shader->ID, "enterTexture"), 2);
-	glUniform1i(glGetUniformLocation(shader->ID, "exitTexture"), 3);
-	*/
-	
-	/*
-	for (int i = 0; i < lights.size(); i++) {	// Setting unirom binding of light textures
-		std::string uniformName("lights[");
-		uniformName.append(std::to_string(i)).append("].exitTexture");
-		glUniform1i(glGetUniformLocation(shader->ID, uniformName.c_str()), 4 + i);
-	}
-	*/
-	glUniform2f(glGetUniformLocation(shader->ID, "scale"), scale.x, scale.y);
-	glUniform2f(glGetUniformLocation(shader->ID, "offset"), offset.x, offset.y);
+	glUniform2f(glGetUniformLocation(voxelShader->ID, "scale"), scale.x, scale.y);
+	glUniform2f(glGetUniformLocation(voxelShader->ID, "offset"), offset.x, offset.y);
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glEnable(GL_CULL_FACE);
+	
+	//Draw opacity:
+	glUniform1f(glGetUniformLocation(voxelShader->ID, "opacityMode"), true);
+	opacityFBOs[target].Bind();
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
 	voxelTexture->Unbind();
 	transferFunction.Unbind();
 	enterTexture->Unbind();
 	exitTexture->Unbind();
+	opacityTextures[source]->Unbind();
+}
 
-	transferFunction.draw();
-	referenceSpatialTransferFunction.draw();
+void VoxelData::drawQuad() {
+	FBO::BindDefault();
+	quadShader->Activate();
+	quadVAO->Bind();
+	quadTexture->Bind();
+	glUniform2f(glGetUniformLocation(quadShader->ID, "scale"), 1.0f, 1.0f);
+	glUniform2f(glGetUniformLocation(quadShader->ID, "offset"), 0.0f, 0.0f);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 
@@ -345,4 +411,8 @@ bool VoxelData::popChanged() {
 	bool prevChanged = changed;
 	changed = false;
 	return prevChanged;
+}
+
+void VoxelData::setAnimation(Animation* animation) {
+	this->animation = animation;
 }

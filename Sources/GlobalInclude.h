@@ -12,6 +12,8 @@
 
 # define M_PI           3.14159265358979323846  /* pi */
 
+#define MAX_LIGHT_COUNT 16
+
 static struct GlobalVariables {
 	static GLFWwindow* window;
 	static int windowWidth;

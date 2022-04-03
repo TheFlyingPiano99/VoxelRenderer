@@ -228,7 +228,6 @@ void TransferFunction::draw()
 	else {
 		return;
 	}
-	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);

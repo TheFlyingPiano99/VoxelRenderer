@@ -7,29 +7,29 @@ layout (binding = 0) uniform sampler3D voxels;
 layout (binding = 1) uniform sampler2D colorAttenuationTransfer;
 layout (binding = 2) uniform sampler2D enterTexture;
 layout (binding = 3) uniform sampler2D exitTexture;
+layout (binding = 4) uniform sampler2D opacityTexture;
 
-layout (binding = 4) uniform sampler2D lightExitTexture0;
-layout (binding = 5) uniform sampler2D lightExitTexture1;
-layout (binding = 6) uniform sampler2D lightExitTexture2;
-layout (binding = 7) uniform sampler2D lightExitTexture3;
-layout (binding = 8) uniform sampler2D lightExitTexture4;
-layout (binding = 9) uniform sampler2D lightExitTexture5;
-layout (binding = 10) uniform sampler2D lightExitTexture6;
-layout (binding = 11) uniform sampler2D lightExitTexture7;
+layout (binding = 5) uniform sampler2D lightExitTexture0;
+layout (binding = 6) uniform sampler2D lightExitTexture1;
+layout (binding = 7) uniform sampler2D lightExitTexture2;
+layout (binding = 8) uniform sampler2D lightExitTexture3;
+layout (binding = 9) uniform sampler2D lightExitTexture4;
+layout (binding = 10) uniform sampler2D lightExitTexture5;
+layout (binding = 11) uniform sampler2D lightExitTexture6;
+layout (binding = 12) uniform sampler2D lightExitTexture7;
 
 uniform vec3 resolution;
 uniform mat4 modelMatrix;
 uniform mat4 invModelMatrix;
-
-uniform float exposure;
-uniform float gamma;
 
 uniform float shininess;
 uniform vec3 specularColor;
 uniform vec3 ambientColor;
 
 uniform unsigned int shadowSamples;
-uniform float depthLimit;
+uniform bool opacityMode;
+uniform float depth;
+uniform unsigned int stepCount;
 
 struct Light {
 	vec4 position;
@@ -126,16 +126,12 @@ vec3 calculateLightLevel(vec3 modelPos, vec3 diffuseColor, vec3 specularColor, f
 
 vec4 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
 	float rayLength = length(cameraRay);
-	vec4 color = vec4(0.0);
 	if (0.000001 < rayLength) {
-		vec3 cameraRayDirection = normalize(cameraRay);
-		float distanceTravelled = 0.0;
-		vec3 currentPos = cameraRayStart;
-		int iterations = 0;
-
-		float delta = 0.95f;
-		float opacity = 1.0;
-		while (distanceTravelled < rayLength * depthLimit) {
+		vec3 currentPos = cameraRayStart + depth * cameraRay;
+		vec4 color = vec4(0.0);
+		float delta = rayLength / float(stepCount);
+		float opacity = texture(opacityTexture, texCoords).x;
+		if (depth < 1.0) {
 			vec4 gradientIntesity = resampleGradientAndDensity(currentPos, trilinearInterpolation(currentPos));
 			vec4 colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));
 			vec3 lightLevel = vec3(0.0);
@@ -143,33 +139,41 @@ vec4 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
 				lightLevel += calculateLightLevel(currentPos, colorAttenuation.rgb, specularColor, shininess, lights[i], gradientIntesity.xyz, cameraRayStart);
 			}
 			lightLevel += ambientColor;
-			color.rgb += delta * opacity * lightLevel;	// Sum color
-			color.a += colorAttenuation.a * delta;
-			opacity *= pow(1 - colorAttenuation.a, delta);	// Product opacity
-			currentPos += cameraRayDirection * delta;
-			distanceTravelled += delta;
-			iterations++;
+			color.rgb = delta * opacity * lightLevel;
+			color.a = colorAttenuation.a * delta;
 		}
+		return color;
 	}
 	else {
-		return vec4(0, 0, 0, 0);	// Background outside bounding cuboid
+		return vec4(0.0);
 	}
-	return color;
 }
 
+vec4 calculateOpacity(vec3 cameraRayStart, vec3 cameraRay) {
+	float rayLength = length(cameraRay);
+	if (0.000001 < rayLength) {
+		vec3 currentPos = cameraRayStart + depth * cameraRay;
+		float delta = rayLength / float(stepCount);
+		float opacity = texture(opacityTexture, texCoords).x;
+		if (depth < 1.0) {
+			vec4 gradientIntesity = resampleGradientAndDensity(currentPos, trilinearInterpolation(currentPos));
+			vec4 colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));
+			opacity *= pow(1 - colorAttenuation.a, delta);
+		}
+		return vec4(opacity, 0, 0, 1);
+	}
+	else {
+		return vec4(0.0);
+	}
+}
 
-void main() {
-	//vec3 cameraRayStart;
-	//vec3 cameraRayDirection;
-	//calculateRayStart(vec2(texCoords.x, -texCoords.y) * 2 - 1, cameraRayStart, cameraRayDirection);
-	
+void main() {	
 	vec3 start = texture(enterTexture, texCoords).xyz;
 	vec3 ray = texture(exitTexture, texCoords).xyz - start;
-	vec4 hdrColor = calculateColor(start, ray);
-	// HDR Tone mapping
-    vec3 result = vec3(1.0) - exp(-hdrColor.rgb * exposure);
-	// GAMMA CORRECTION (OPTIONAL)
-    result = pow(result, vec3(1.0 / gamma));
-
-	FragColor = vec4(result, hdrColor.a);
+	if (opacityMode) {
+		FragColor = calculateOpacity(start, ray);
+	}
+	else {
+		FragColor = calculateColor(start, ray);
+	}
 }

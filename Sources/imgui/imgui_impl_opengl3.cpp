@@ -726,20 +726,20 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     GLuint vert_handle = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vert_handle, 2, vertex_shader_with_version, NULL);
     glCompileShader(vert_handle);
-    CheckShader(vert_handle, "vertex shader");
+    CheckShader(vert_handle, "vertex voxelShader");
 
     const GLchar* fragment_shader_with_version[2] = { bd->GlslVersionString, fragment_shader };
     GLuint frag_handle = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(frag_handle, 2, fragment_shader_with_version, NULL);
     glCompileShader(frag_handle);
-    CheckShader(frag_handle, "fragment shader");
+    CheckShader(frag_handle, "fragment voxelShader");
 
     // Link
     bd->ShaderHandle = glCreateProgram();
     glAttachShader(bd->ShaderHandle, vert_handle);
     glAttachShader(bd->ShaderHandle, frag_handle);
     glLinkProgram(bd->ShaderHandle);
-    CheckProgram(bd->ShaderHandle, "shader program");
+    CheckProgram(bd->ShaderHandle, "voxelShader program");
 
     glDetachShader(bd->ShaderHandle, vert_handle);
     glDetachShader(bd->ShaderHandle, frag_handle);

@@ -99,9 +99,6 @@
     <ClCompile Include="DualNumber.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PostprocessUnit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="imgui\imgui.cpp">
       <Filter>Source Files\imgui</Filter>
     </ClCompile>
@@ -233,9 +230,6 @@
     <ClInclude Include="Mesh.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
-    <ClInclude Include="PostprocessUnit.h">
-      <Filter>Header Files\View</Filter>
-    </ClInclude>
     <ClInclude Include="Scene.h">
       <Filter>Header Files\Controller</Filter>
     </ClInclude>
@@ -308,9 +302,6 @@
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="..\Resources\Shaders\light.vert">
-      <Filter>Resource Files\Shaders</Filter>
-    </None>
-    <None Include="..\Resources\Shaders\postprocess.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="..\Resources\Shaders\quad.vert">

@@ -9,20 +9,29 @@
 #include "Light.h"
 #include "TransferFunction.h"
 #include "FBO.h"
+#include "Animation.h"
+#include "GlobalInclude.h"
 
 #define TRANSFER_MODE_COUNT 4
 
 class VoxelData
 {
-	Shader* shader = nullptr;	// Don't delete!
+	Shader* voxelShader = nullptr;	// Don't delete!
+	Shader* quadShader = nullptr;	// Don't delete!
 	Texture3D* voxelTexture = nullptr;
+	Texture2D* quadTexture = nullptr;
 
 	VAO* quadVAO;
 	FBO enterFBO, exitFBO;
 	Texture2D* enterTexture = nullptr;
 	Texture2D* exitTexture = nullptr;
-	FBO lightFBOs[16];
-	Texture2D* lightTextures[16] = {nullptr};
+	FBO lightFBOs[MAX_LIGHT_COUNT];
+	Texture2D* lightTextures[MAX_LIGHT_COUNT] = {nullptr};
+
+	FBO opacityFBOs[2];
+	Texture2D* opacityTextures[2] = {nullptr};
+	
+	FBO quadFBO;
 
 	BoundingGeometry boundingGeometry;
 	TransferFunction transferFunction;
@@ -56,6 +65,7 @@ class VoxelData
 	const char* transferRegionSelectModes[TRANSFER_MODE_COUNT] = { "Flood fill", "General area", "Single class", "Remove class"};
 	const char* currentTransferRegionSelectMode = "Single class";
 
+	Animation* animation = nullptr;
 	bool changed = true;
 
 	void exportData();
@@ -66,12 +76,16 @@ class VoxelData
 	void updateMatrices();
 
 public :
-	VoxelData(Shader* _shader, Shader* boundingShader, Shader* transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight);
+	VoxelData(Shader* _shader, Shader* quadShader, Shader* boundingShader, Shader* transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight);
 	~VoxelData();
 
 	void animate(float dt);
 	void control(float dt, bool paused, float cameraLastActive);
-	void draw(Camera& camera, std::vector<Light>& lights, FBO& quadFBO, glm::vec2 scale, glm::vec2 offse, float depthLimit);
+	void drawLayer(Camera& camera, std::vector<Light>& lights, glm::vec2 scale, glm::vec2 offse, unsigned int currentStep, unsigned int stepCount);
+	void drawQuad();
+	void drawBoundingGeometry(Camera& camera, std::vector<Light>& lights);
+	void drawTransferFunction();
+	void resetOpacity();
 
 	void shiftIntersectionPlane(float delta);
 	void rotateIntersectionPlane(float rad);
@@ -147,6 +161,8 @@ public :
 	void rotateModelAroundZ(float rad);
 
 	bool popChanged();
+
+	void setAnimation(Animation* animation);
 
 };
 

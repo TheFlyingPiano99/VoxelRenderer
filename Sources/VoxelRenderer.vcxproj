@@ -185,7 +185,6 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Plane.cpp" />
-    <ClCompile Include="PostprocessUnit.cpp" />
     <ClCompile Include="RBO.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SceneObject.cpp" />
@@ -230,7 +229,6 @@
     <ClInclude Include="LightSource.h" />
     <ClInclude Include="MathUtil.h" />
     <ClInclude Include="Plane.h" />
-    <ClInclude Include="PostprocessUnit.h" />
     <ClInclude Include="RBO.h" />
     <ClInclude Include="SingletonManager.h" />
     <ClInclude Include="Mesh.h" />
@@ -256,7 +254,6 @@
     <None Include="..\Resources\Shaders\default.vert" />
     <None Include="..\Resources\Shaders\light.frag" />
     <None Include="..\Resources\Shaders\light.vert" />
-    <None Include="..\Resources\Shaders\postprocess.frag" />
     <None Include="..\Resources\Shaders\quad.frag" />
     <None Include="..\Resources\Shaders\quad.vert" />
     <None Include="..\Resources\Shaders\transfer.frag" />
