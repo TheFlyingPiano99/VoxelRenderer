@@ -296,19 +296,21 @@ void VoxelData::drawQuad(Texture2D& targetDepthTexture) {
 
 void VoxelData::updateMatrices()
 {
-	Dimensions dim = voxelTexture->getDimensions();
-	modelMatrix =
-		glm::translate(position)
-		* glm::rotate(animationEulerAngles.x, glm::vec3(1, 0, 0))
-		* glm::rotate(animationEulerAngles.z, glm::vec3(0, 0, 1))
-		* glm::rotate(animationEulerAngles.y, glm::vec3(0, 1, 0))
-		* glm::rotate(staticEulerAngles.x, glm::vec3(1, 0, 0))
-		* glm::rotate(staticEulerAngles.z, glm::vec3(0, 0, 1))
-		* glm::rotate(staticEulerAngles.y, glm::vec3(0, 1, 0))
-		* glm::orientation(normal, up)
-		* glm::scale(scale)
-		* glm::translate(glm::vec3(dim.width, dim.height, dim.depth) * -0.5f);	// Origo to center of volume.
-	invModelMatrix = glm::inverse(modelMatrix);
+	if (changed) {
+		Dimensions dim = voxelTexture->getDimensions();
+		modelMatrix =
+			glm::translate(position)
+			* glm::rotate(animationEulerAngles.x, glm::vec3(1, 0, 0))
+			* glm::rotate(animationEulerAngles.z, glm::vec3(0, 0, 1))
+			* glm::rotate(animationEulerAngles.y, glm::vec3(0, 1, 0))
+			* glm::rotate(staticEulerAngles.x, glm::vec3(1, 0, 0))
+			* glm::rotate(staticEulerAngles.z, glm::vec3(0, 0, 1))
+			* glm::rotate(staticEulerAngles.y, glm::vec3(0, 1, 0))
+			* glm::orientation(normal, up)
+			* glm::scale(scale)
+			* glm::translate(glm::vec3(dim.width, dim.height, dim.depth) * -0.5f);	// Origo to center of volume.
+		invModelMatrix = glm::inverse(modelMatrix);
+	}
 }
 
 void VoxelData::shiftIntersectionPlane(float delta)
