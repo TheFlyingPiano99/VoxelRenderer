@@ -28,6 +28,8 @@ void SceneObject::draw(Camera& camera, std::vector<Light>& lights)
 		glUniform1i(glGetUniformLocation(shader->ID, "lightCount"), lights.size());
 		glEnable(GL_CULL_FACE);
 		glEnable(GL_DEPTH_TEST);
+		glDisable(GL_BLEND);
+		glDepthFunc(GL_LESS);
 		mesh->Draw(*shader, camera);
 	}
 }

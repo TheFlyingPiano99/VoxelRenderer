@@ -77,6 +77,7 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 		delete opacityTextures[0];
 		delete opacityTextures[1];
 		delete quadTexture;
+		delete quadDepthTexture;
 	}
 
 	RBO enterExitRbo(GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
@@ -93,13 +94,13 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 
 	// Opacity:
 	opacityTextures[0] = new Texture2D(GL_RGBA, glm::vec2(contextWidth, contextHeight), 4, GL_RGBA, GL_FLOAT);
-	opacityFBOs[0].LinkTexture(GL_COLOR_ATTACHMENT0, *opacityTextures[0], 0);
 	opacityTextures[1] = new Texture2D(GL_RGBA, glm::vec2(contextWidth, contextHeight), 4, GL_RGBA, GL_FLOAT);
-	opacityFBOs[1].LinkTexture(GL_COLOR_ATTACHMENT0, *opacityTextures[1], 0);
+
+	// SkyBox is at location 5.
 
 	// Lights:
 	for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
-		lightTextures[i] = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 5 + i, GL_RGBA, GL_UNSIGNED_BYTE);
+		lightTextures[i] = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 6 + i, GL_RGBA, GL_UNSIGNED_BYTE);
 		lightFBOs[i].LinkTexture(GL_COLOR_ATTACHMENT0, *lightTextures[i], 0);
 
 		RBO lightRbo(GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
@@ -109,6 +110,8 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 	// Quad:
 	quadTexture = new Texture2D(GL_RGBA, glm::vec2(contextWidth, contextHeight), 0, GL_RGBA, GL_FLOAT);
 	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *quadTexture, 0);
+	quadDepthTexture = new Texture2D(GL_DEPTH_COMPONENT, glm::vec2(contextWidth, contextHeight), 1, GL_DEPTH_COMPONENT, GL_FLOAT);
+	quadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, *quadDepthTexture, 0);
 }
 
 VoxelData::VoxelData(Shader* _voxelShader, Shader* quadShader, Shader* _boundingShader, Shader* _flatColorBoundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
@@ -136,8 +139,8 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* quadShader, Shader* _bounding
 	STFEmission(1.0f),
 	STFOpacity(1.0f),
 	shininess(20.0f),
-	specularColor(0.2f, 0.2f, 0.2f),
-	ambientColor(0.0001f, 0.0001f, 0.0001f)
+	specularColor(0.56f, 0.56f, 0.5f),
+	ambientColor(0.005f, 0.005f, 0.005f)
 	{
 	// Stores the width, height, and the number of color channels of the image
 	Dimensions dimensions;
@@ -207,15 +210,15 @@ void VoxelData::drawBoundingGeometry(Camera& camera, std::vector<Light>& lights)
 
 void VoxelData::resetOpacity()
 {
-	opacityFBOs[0].Bind();
+	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[0], 0);
 	glClearColor(1, 0, 0, 1);
+	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT1 });
 	glClear(GL_COLOR_BUFFER_BIT);
-	opacityFBOs[1].Bind();
-	glClearColor(1, 0, 0, 1);
-	glClear(GL_COLOR_BUFFER_BIT);
-	quadFBO.Bind();
+	// No need to clear the second opacityTexture, because it will be copied from the first texture.
+	glClearDepth(1.0f);
 	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT);
+	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0 });
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void VoxelData::drawBoundingGeometryOnScreen(Camera& camera, float opacity)
@@ -224,21 +227,27 @@ void VoxelData::drawBoundingGeometryOnScreen(Camera& camera, float opacity)
 }
 
 void VoxelData::drawTransferFunction() {
-	FBO::BindDefault();
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_BLEND);
 	transferFunction.draw();
 	referenceSpatialTransferFunction.draw();
 }
 
 
-void VoxelData::drawLayer(Camera& camera, std::vector<Light>& lights, glm::vec2 scale, glm::vec2 offset, unsigned int currentStep, unsigned int stepCount) {
+void VoxelData::drawLayer(Camera& camera, std::vector<Light>& lights, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount) 
+{
+	unsigned int source = currentStep % 2;
+	unsigned int target = (currentStep + 1) % 2;
+	float depth = (currentStep + 1.0f) / (float)stepCount;
+	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[target], 0);
+
 	quadFBO.Bind();
 	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_ALWAYS);
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE);
+	glBlendFunci(0, GL_ONE, GL_ONE);
+	glBlendFunci(1, GL_ONE, GL_ZERO);
+	
+	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
 	quadVAO->Bind();
 	voxelShader->Activate();
 	this->exportData();
@@ -247,14 +256,11 @@ void VoxelData::drawLayer(Camera& camera, std::vector<Light>& lights, glm::vec2 
 		lights[i].exportData(*voxelShader, i);
 	}
 
-	unsigned int source = currentStep % 2;
-	unsigned int target = (currentStep + 1) % 2;
-	float depth = (currentStep + 1.0f) / (float)stepCount;
-
 	glUniform1ui(glGetUniformLocation(voxelShader->ID, "lightCount"), lights.size());
-	glUniform1f(glGetUniformLocation(voxelShader->ID, "opacityMode"), false);
 	glUniform1f(glGetUniformLocation(voxelShader->ID, "depth"), depth);
 	glUniform1ui(glGetUniformLocation(voxelShader->ID, "stepCount"), stepCount);
+	glActiveTexture(GL_TEXTURE0 + 5);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.getTexture().ID);
 
 	voxelTexture->Bind();
 	transferFunction.Bind();
@@ -264,18 +270,6 @@ void VoxelData::drawLayer(Camera& camera, std::vector<Light>& lights, glm::vec2 
 	for (int i = 0; i < lights.size(); i++) {
 		lightTextures[i]->Bind();
 	}
-
-	glUniform2f(glGetUniformLocation(voxelShader->ID, "scale"), scale.x, scale.y);
-	glUniform2f(glGetUniformLocation(voxelShader->ID, "offset"), offset.x, offset.y);
-
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	
-	//Draw opacity:
-	glUniform1f(glGetUniformLocation(voxelShader->ID, "opacityMode"), true);
-	opacityFBOs[target].Bind();
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_BLEND);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	voxelTexture->Unbind();
@@ -285,15 +279,15 @@ void VoxelData::drawLayer(Camera& camera, std::vector<Light>& lights, glm::vec2 
 	opacityTextures[source]->Unbind();
 }
 
-void VoxelData::drawQuad() {
-	FBO::BindDefault();
+void VoxelData::drawQuad(Texture2D& targetDepthTexture) {
 	quadShader->Activate();
 	quadVAO->Bind();
 	quadTexture->Bind();
-	glUniform2f(glGetUniformLocation(quadShader->ID, "scale"), 1.0f, 1.0f);
-	glUniform2f(glGetUniformLocation(quadShader->ID, "offset"), 0.0f, 0.0f);
+	quadDepthTexture->Bind();
+	targetDepthTexture.Bind();
 	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_ALWAYS);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDrawArrays(GL_TRIANGLES, 0, 6);

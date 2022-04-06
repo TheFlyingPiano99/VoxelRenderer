@@ -22,7 +22,7 @@ void FBO::Delete()
 	glDeleteFramebuffers(1, &ID);
 }
 
-void FBO::LinkTexture(GLenum attachment, Texture2D& texture, GLint level)
+void FBO::LinkTexture(GLenum attachment, Texture2D& texture, GLint level = 0)
 {
 	glm::ivec2 dim = texture.getDimensions();
 	viewport = glm::vec4(0, 0, dim.x, dim.y);
@@ -35,6 +35,11 @@ void FBO::LinkRBO(GLenum attachment, RBO& rbo)
 {
 	Bind();
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, rbo.ID);
+}
+
+void FBO::SelectDrawBuffers(std::vector<GLenum> bufs)
+{
+	glDrawBuffers(bufs.size(), &bufs[0]);
 }
 
 

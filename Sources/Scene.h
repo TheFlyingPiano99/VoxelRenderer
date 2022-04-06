@@ -7,6 +7,7 @@
 #include "Camera.h"
 #include "Stars.h"
 #include "VoxelData.h"
+#include "SkyBox.h"
 
 /*
 * Singleton object
@@ -24,7 +25,9 @@ class Scene
 	std::vector<SceneObject*> sceneObjects;
 
 	VAO quadVAO;
+	Shader* quadShader;
 	VoxelData* voxels = nullptr;
+	SkyBox* skybox = nullptr;
 
 	bool pause = true;
 	bool gravitation = false;
@@ -33,10 +36,15 @@ class Scene
 	int partToDraw = -1;
 	int noOfPartsToDraw = 256;
 
+	FBO quadFBO;
+	Texture2D* quadColorTexture = nullptr;
+	Texture2D* quadDepthTexture = nullptr;
+
 	Scene(unsigned int contextWidth, unsigned int contextHeight) : contextWidth(contextWidth), contextHeight(contextHeight) {
 	}
 
 
+	void initQuadFBO();
 	void initQuad();
 	void initInfinitePlane();
 	void initCamera();

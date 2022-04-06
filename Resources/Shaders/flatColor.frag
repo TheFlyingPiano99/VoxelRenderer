@@ -9,5 +9,6 @@ uniform vec3 modelEye;
 
 void main()
 {
+
 	FragColor = color * min(1.0, pow(length(modelPos - modelEye), 3));
 }

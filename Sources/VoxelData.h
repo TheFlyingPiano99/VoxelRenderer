@@ -11,6 +11,7 @@
 #include "FBO.h"
 #include "Animation.h"
 #include "GlobalInclude.h"
+#include "SkyBox.h"
 
 #define TRANSFER_MODE_COUNT 4
 
@@ -27,10 +28,9 @@ class VoxelData
 	Texture2D* exitTexture = nullptr;
 	FBO lightFBOs[MAX_LIGHT_COUNT];
 	Texture2D* lightTextures[MAX_LIGHT_COUNT] = {nullptr};
-
-	FBO opacityFBOs[2];
 	Texture2D* opacityTextures[2] = {nullptr};
-	
+	Texture2D* quadDepthTexture = nullptr;
+
 	FBO quadFBO;
 
 	BoundingGeometry boundingGeometry;
@@ -81,8 +81,8 @@ public :
 
 	void animate(float dt);
 	void control(float dt, bool paused, float cameraLastActive);
-	void drawLayer(Camera& camera, std::vector<Light>& lights, glm::vec2 scale, glm::vec2 offse, unsigned int currentStep, unsigned int stepCount);
-	void drawQuad();
+	void drawLayer(Camera& camera, std::vector<Light>& lights, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount);
+	void drawQuad(Texture2D& targetDepthTexture);
 	void drawBoundingGeometry(Camera& camera, std::vector<Light>& lights);
 	void drawBoundingGeometryOnScreen(Camera& camera, float opacity);
 	void drawTransferFunction();

@@ -89,4 +89,5 @@ void main()
 		lightSum += calculateLight(lights[i], worldPos.xyz, normal, viewDir);
 	}
 	FragColor = vec4(lightSum, 1.0f);
+	FragColor = vec4(0.5,0.5, 0.5, 1.0);
 }

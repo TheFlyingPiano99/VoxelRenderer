@@ -15,10 +15,12 @@ public:
 	glm::vec3 eye;
 	glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::vec3 prefUp = glm::vec3(0.0f, 1.0f, 0.0f);
+	glm::mat4 view = glm::mat4(1.0f);
+	glm::mat4 projection = glm::mat4(1.0f);
 	glm::mat4 viewProjMatrix = glm::mat4(1.0f);
 	glm::mat4 invViewProjMatrix = glm::mat4(1.0f);
 	float FOVdeg = 45.0f;
-	float nearPlane = 2.0f;
+	float nearPlane = 0.1f;
 	float farPlane = 2000.0f;
 
 	// Prevents the camera from jumping around when first clicking left click

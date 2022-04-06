@@ -60,6 +60,20 @@ GLuint lightIndices[] =
 
 Scene* Scene::instance = nullptr;
 
+void Scene::initQuadFBO()
+{
+	if (quadColorTexture != nullptr) {
+		delete quadColorTexture;
+		delete quadDepthTexture;
+	}
+	quadColorTexture = new Texture2D(GL_RGBA, glm::ivec2(contextWidth, contextHeight), 0, GL_RGBA, GL_FLOAT);
+	quadDepthTexture = new Texture2D(GL_DEPTH_COMPONENT, glm::ivec2(contextWidth, contextHeight), 2, GL_DEPTH_COMPONENT, GL_FLOAT);
+	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *quadColorTexture, 0);
+	quadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, *quadDepthTexture, 0);
+	RBO stencilRBO(GL_STENCIL_COMPONENTS, contextWidth, contextHeight);
+	//quadFBO.LinkRBO(GL_STENCIL_ATTACHMENT, stencilRBO);
+}
+
 void Scene::initQuad()
 {
 	float quadVertices[] =
@@ -108,19 +122,19 @@ void Scene::initInfinitePlane()
 	Vertex v2;
 	v2.color = color;
 	v2.normal = glm::vec3(0.0f, 1.0f, 0.0f);
-	v2.position = glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f);
+	v2.position = glm::vec4(-10.0f, 0.0f, -10.0f, 0.0f);
 	v2.texUV = glm::vec2(0.0f, 1.0f);
 
 	Vertex v3;
 	v3.color = color;
 	v3.normal = glm::vec3(0.0f, 1.0f, 0.0f);
-	v3.position = glm::vec4(1.0f, 0.0f, -1.0f, 0.0f);
+	v3.position = glm::vec4(10.0f, 0.0f, -10.0f, 0.0f);
 	v3.texUV = glm::vec2(1.0f, 1.0f);
 
 	Vertex v4;
 	v4.color = color;
 	v4.normal = glm::vec3(0.0f, 1.0f, 0.0f);
-	v4.position = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
+	v4.position = glm::vec4(0.0f, 0.0f, 10.0f, 0.0f);
 	v4.texUV = glm::vec2(0.5f, 0.0f);
 
 	infinitePlaneVertices.push_back(v1);
@@ -151,9 +165,9 @@ void Scene::initCamera()
 	lights.push_back(Light());	// Headlight
 	lights[0].powerDensity = glm::vec3(headLightPower);
 	camera->moved = true;
-	//lights.push_back(Light());	// Static light
-	//lights[1].position = glm::vec4(0.0f, 300.0f, 300.0f, 1.0f);
-	//lights[1].powerDensity = glm::vec3(10000.0f, 10000.0f, 10000.0f);
+	lights.push_back(Light());	// Static light
+	lights[1].position = glm::vec4(0.0f, 300.0f, 300.0f, 1.0f);
+	lights[1].powerDensity = glm::vec3(10000.0f, 10000.0f, 10000.0f);
 
 }
 
@@ -180,13 +194,28 @@ void Scene::initMeshesShadersObjects()
 		AssetManager::getInstance()->getShaderFolderPath().append("transfer.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("transfer.frag").c_str()
 	);
+	Shader* skyboxShader = new Shader(
+		AssetManager::getInstance()->getShaderFolderPath().append("skybox.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("skybox.frag").c_str()
+	);
+
 	shaders.push_back(voxelShader);
 	shaders.push_back(quadShader);
 	shaders.push_back(boundingShader);
 	shaders.push_back(flatColorBoundingShader);
 	shaders.push_back(transferShader);
+	shaders.push_back(skyboxShader);
 
+	std::vector<std::string> images;
+	images.push_back(AssetManager::getInstance()->getTextureFolderPath().append("right.jpg").c_str());
+	images.push_back(AssetManager::getInstance()->getTextureFolderPath().append("left.jpg").c_str());
+	images.push_back(AssetManager::getInstance()->getTextureFolderPath().append("top.jpg").c_str());
+	images.push_back(AssetManager::getInstance()->getTextureFolderPath().append("bottom.jpg").c_str());
+	images.push_back(AssetManager::getInstance()->getTextureFolderPath().append("front.jpg").c_str());
+	images.push_back(AssetManager::getInstance()->getTextureFolderPath().append("back.jpg").c_str());
+	skybox = new SkyBox(images, skyboxShader);
 
+	this->quadShader = quadShader;
 	const char* paths[3] = {
 		"D:/VisualCpp/VoxelRenderer/Resources/Volumetric/cthead-8bit/",
 		"D:/VisualCpp/VoxelRenderer/Resources/Volumetric/mrbrain-8bit/",
@@ -223,6 +252,7 @@ void Scene::init(int contextWidth, int contextHeight)
 {
 	this->contextWidth = contextWidth;
 	this->contextHeight = contextHeight;
+	initQuadFBO();
 	initQuad();
 	//initInfinitePlane();
 	initCamera();
@@ -295,33 +325,47 @@ void Scene::draw()
 
 	bool cameraMoved = camera->update();
 
-	FBO::BindDefault();
+	quadFBO.Bind();
 	glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
 	glClearDepth(1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glStencilMask(0x00);
+
 
 	if (cameraMoved || voxels->popChanged()) {
 		partToDraw = 0;
-
-		for (auto obj : sceneObjects) {
-			obj->draw(*camera, lights);
-		}
 		voxels->drawBoundingGeometry(*camera, lights);
 		voxels->resetOpacity();
 	}
-
 	if (partToDraw >= 0) {
-		voxels->drawLayer(*camera, lights, glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 0.0f), partToDraw, noOfPartsToDraw);
+		voxels->drawLayer(*camera, lights, *skybox, partToDraw, noOfPartsToDraw);
 		partToDraw++;
 		if (partToDraw == noOfPartsToDraw) {
 			partToDraw = -1;
 		}
 	}
+
+	quadFBO.Bind();
+	skybox->draw(*camera);
+	for (auto obj : sceneObjects) {
+		obj->draw(*camera, lights);
+	}
 	if (partToDraw >= 0) {
 		voxels->drawBoundingGeometryOnScreen(*camera, (1.0f - std::powf(partToDraw / (float)noOfPartsToDraw, 0.2f)) * 0.3f);
 	}
-	voxels->drawQuad();
+
+	voxels->drawQuad(*quadDepthTexture);
 	voxels->drawTransferFunction();
+
+	FBO::BindDefault();
+	quadShader->Activate();
+	quadVAO.Bind();
+	quadColorTexture->Bind();
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_BLEND);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 void Scene::togglePause()
@@ -355,5 +399,6 @@ void Scene::onContextResize(int contextWidth, int contextHeight)
 	if (voxels != nullptr) {
 		voxels->onContextResize(contextWidth, contextHeight);
 	}
+	initQuadFBO();
 	camera->moved = true;
 }

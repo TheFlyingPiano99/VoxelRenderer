@@ -13,9 +13,9 @@ Camera::Camera(int width, int height, glm::vec3 eye, glm::vec3 center)
 bool Camera::update()
 {
 	// Makes camera look in the right direction from the right position
-	glm::mat4 view = glm::lookAt(eye, center, prefUp);
+	view = glm::lookAt(eye, center, prefUp);
 	// Adds perspective to the scene
-	glm::mat4 projection = glm::perspective(glm::radians(FOVdeg), (float)width / height, nearPlane, farPlane);
+	projection = glm::perspective(glm::radians(FOVdeg), (float)width / height, nearPlane, farPlane);
 
 	viewProjMatrix = projection * view;
 	invViewProjMatrix = glm::inverse(viewProjMatrix);

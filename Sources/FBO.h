@@ -19,6 +19,11 @@ public:
 
 	void LinkRBO(GLenum attachment, RBO& rbo);
 
+	/*
+	* NO BINDING!!!
+	*/
+	void SelectDrawBuffers(std::vector<GLenum> bufs);
+
 	static void BindDefault();
 };
 

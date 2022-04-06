@@ -327,10 +327,10 @@ void BoundingGeometry::draw(Camera& camera, std::vector<Light>& lights, glm::mat
 
 void BoundingGeometry::drawOnScreen(Camera& camera, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, float opacity)
 {
-	FBO::BindDefault();
 	flatColorShader->Activate();
 	VAO.Bind();
-	glDisable(GL_DEPTH);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
