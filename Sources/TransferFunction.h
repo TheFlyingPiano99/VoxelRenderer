@@ -1,11 +1,83 @@
 #pragma once
 
 #include<glm/glm.hpp>
+#include <iostream>
+#include <fstream>
 #include "shaderClass.h"
 #include "Texture2D.h"
 #include "VAO.h"
 #include "Texture3D.h"
 
+struct Feature {
+	std::vector<glm::ivec2> elements;
+	glm::vec3 color;
+	std::string name;
+	bool visible;
+	float opacity;
+	float emission;
+
+	bool operator==(Feature feature) {
+		return (name.compare(feature.name) == 0);
+	}
+
+	void save(std::ostream& stream) {
+		stream << "feature" << std::endl << std::endl;
+		stream << "name:" << name << std::endl;
+		stream << "color:" << color.r << ":" << color.g << ":" << color.b << std::endl;
+		stream << "opacity:" << opacity << std::endl;
+		stream << "emission:" << emission << std::endl;
+		stream << "elements:";
+		for (int i = 0; i < elements.size(); i++) {
+			glm::ivec2 v = elements[i];
+			stream << v.x << ":";
+			stream << v.y;
+			if (i < elements.size() - 1) {
+				stream << ":";
+			}
+		}
+		stream << std::endl;
+		stream << "/feature" << std::endl << std::endl;
+	}
+
+	void load(std::istream& stream) {
+		std::string line;
+		std::string delimiter = ":";
+		while (std::getline(stream, line)) {
+			std::vector<std::string> tokens;
+			while (!line.empty()) {
+				tokens.push_back(line.substr(0, line.find(delimiter)));
+				line.erase(0, (*tokens.rbegin()).length());
+				line.erase(0, line.find(delimiter) + delimiter.length());
+			}
+			if (tokens.size() > 1) {
+				if (tokens[0].compare("name") == 0) {
+					name = tokens[1];
+				}
+				if (tokens[0].compare("color") == 0) {
+					color.x = std::stof(tokens[1]);
+					color.y = std::stof(tokens[2]);
+					color.z = std::stof(tokens[3]);
+				}
+				else if (tokens[0].compare("opacity") == 0) {
+					opacity = std::stof(tokens[1]);
+				}
+				else if (tokens[0].compare("emission") == 0) {
+					emission = std::stof(tokens[1]);
+				}
+				else if (tokens[0].compare("elements") == 0) {
+					elements.clear();
+					for (int i = 1; i < tokens.size() - 1; i += 2) {
+						glm::ivec2 v(std::stoi(tokens[i]), std::stoi(tokens[i + 1]));
+						elements.push_back(v);
+					}
+				}
+			}
+			else if (tokens.size() > 0 && tokens[0].compare("/feature") == 0) {
+				break;
+			}
+		}
+	}
+};
 
 class TransferFunction
 {
@@ -17,6 +89,10 @@ class TransferFunction
 	float displayExposure = 1.0f;
 	float displayGamma = 1.0f;
 	glm::vec4 nullVector = glm::vec4(0.0f);
+	std::vector<Feature> features;
+	bool visible = true;
+	glm::vec2 preferedCameraSpacePosition = glm::vec2(0, 0);
+	glm::vec2 cameraSpacePosition = glm::vec2(0, 0);
 
 public:
 	TransferFunction(Shader* shader, VAO* quad);
@@ -38,6 +114,7 @@ public:
 	void draw();
 	void Bind();
 	void Unbind();
+	void clear();
 
 	const glm::ivec2 getDimensions() {
 		if (texture == nullptr)
@@ -56,6 +133,14 @@ public:
 	void defaultTransferFunction(glm::ivec2 dimensions);
 	void spatialTransferFunction(glm::ivec2 dimensions, Texture3D& voxelTexture, float radius, float globalOpacity, float globalEmission);
 	void gradientWeighted(glm::ivec2 dimensions, float globalOpacity);
+
+	void colorFeature(Feature& feature, glm::vec3 color);
+
+	bool setFeatureVisibility(Feature& feature, bool visibility);
+
+	bool setFeatureOpacity(Feature& feature, float opacity);
+
+	Feature* getFeatureFromPosition(glm::vec2 pos);
 
 	glm::vec4& operator()(glm::ivec2 position) {
 		if (texture == nullptr)
@@ -81,5 +166,47 @@ public:
 		return displayGamma;
 	}
 
+	std::vector<Feature>& getFeatures() {
+		return features;
+	}
+
+	void setFeatures(std::vector<Feature> _features) {
+		features = _features;
+	}
+
+	Feature* findFeatureByName(const char* name);
+
+	Feature* nextFeature(Feature* current);
+
+	void showAll();
+
+	void saveFeatures(std::ostream& stream) {
+		for (Feature& feature : features) {
+			feature.save(stream);
+		}
+	}
+
+	void loadFeatures(std::istream& stream) {
+		features.clear();
+		std::string line;
+		while (std::getline(stream, line)) {
+			if (line.compare("feature")) {
+				Feature feature;
+				feature.load(stream);
+				feature.visible = false;
+				features.push_back(feature);
+			}
+		}
+	}
+
+	void toggleVisibility() {
+		visible = !visible;
+	}
+
+	void animate(float dt);
+
+	bool isVisible() {
+		return visible;
+	}
 };
 

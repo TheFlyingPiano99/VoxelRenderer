@@ -35,7 +35,7 @@ class VoxelData
 
 	BoundingGeometry boundingGeometry;
 	TransferFunction transferFunction;
-	TransferFunction referenceSpatialTransferFunction;
+	Feature* selectedFeature = nullptr;
 
 	glm::vec3 scale;
 	glm::vec3 position;
@@ -81,7 +81,7 @@ public :
 
 	void animate(float dt);
 	void control(float dt, bool paused, float cameraLastActive);
-	void drawLayer(Camera& camera, std::vector<Light>& lights, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount);
+	void drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount);
 	void drawQuad(Texture2D& targetDepthTexture);
 	void drawBoundingGeometry(Camera& camera, std::vector<Light>& lights);
 	void drawBoundingGeometryOnScreen(Camera& camera, float opacity);
@@ -126,14 +126,6 @@ public :
 		currentTransferRegionSelectMode = str;
 	}
 
-	float& getReferenceTransferFunctionExposure() {
-		return referenceSpatialTransferFunction.getExposure();
-	}
-
-	float& getReferenceTransferFunctionGamma() {
-		return referenceSpatialTransferFunction.getGamma();
-	}
-
 	void onContextResize(int width, int height) {
 		initFBOs(width, height);
 	}
@@ -165,5 +157,22 @@ public :
 
 	void setAnimation(Animation* animation);
 
+	Feature* getSelectedFeature();
+
+	TransferFunction* getTransferFunction();
+
+	void setSelectedFeature(const char* name);
+
+	void cycleSelectedFeature();
+
+	void update();
+
+	void redrawSelected();
+
+	void showAll();
+
+	void saveFeatures();
+
+	void loadFeatures();
 };
 

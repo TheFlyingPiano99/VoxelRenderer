@@ -166,7 +166,7 @@ void TransferFunction::singleColor(glm::vec3 color)
 {
 	if (texture == nullptr)
 		return;
-	std::cout << "Remove color" << std::endl;
+	std::cout << "Single color" << std::endl;
 	glm::ivec2 dim = texture->getDimensions();
 	std::vector<glm::vec4> bytes(dim.x * dim.y);
 	for (int y = 0; y < dim.y; y++) {
@@ -255,6 +255,28 @@ void TransferFunction::Unbind()
 	}
 }
 
+void TransferFunction::clear()
+{
+	for (Feature& feature : features) {
+		feature.visible = false;
+	}
+	if (texture == nullptr)
+		return;
+	glm::ivec2 dim = texture->getDimensions();
+	std::vector<glm::vec4> bytes = std::vector<glm::vec4>(dim.x * dim.y);
+	for (int y = 0; y < dim.y; y++) {
+		for (int x = 0; x < dim.x; x++) {
+			bytes[y * dim.x + x].r = 0.0f;
+			bytes[y * dim.x + x].g = 0.0f;
+			bytes[y * dim.x + x].b = 0.0f;
+			bytes[y * dim.x + x].a = 0.0f;
+		}
+	}
+	delete texture;
+	texture = new Texture2D(bytes, dim, 1, GL_RGBA, GL_FLOAT);
+
+}
+
 void TransferFunction::defaultTransferFunction(glm::ivec2 dimensions)
 {
 	std::vector<glm::vec4> bytes = std::vector<glm::vec4>(dimensions.x * dimensions.y);
@@ -281,6 +303,7 @@ void TransferFunction::defaultTransferFunction(glm::ivec2 dimensions)
 }
 
 void TransferFunction::spatialTransferFunction(glm::ivec2 dimensions, Texture3D& voxelTexture, float radius, float globalOpacity, float globalEmission) {
+	features.clear();
 	std::vector<glm::vec4> bytes = std::vector<glm::vec4>(dimensions.x * dimensions.y);
 	std::vector<glm::vec3> barycenters = std::vector<glm::vec3>(dimensions.x * dimensions.y);
 	std::vector <std::vector<glm::vec3>> contributingPositions = std::vector<std::vector<glm::vec3>>(dimensions.x * dimensions.y);
@@ -329,21 +352,33 @@ void TransferFunction::spatialTransferFunction(glm::ivec2 dimensions, Texture3D&
 
 	// Classification:
 	srand(0);
+	int featureCunter = 0;
 	for (int i = 0; i < dimensions.x * dimensions.y; i++) {
 
 		if (contributingPositions[i].size() > 0 && bytes[i].r == 0.0f && bytes[i].g == 0.0f && bytes[i].b == 0.0f) {
 			glm::vec3 Crgb = glm::vec3(rand() % 255 / 255.0f, rand() % 255 / 255.0f, rand() % 255 / 255.0f);
 			glm::vec3 b0 = barycenters[i];
 			float v0 = spatialVariances[i];
+			Feature feature;
+			feature.color = Crgb;
+			feature.visible = true;
+			feature.name = std::string("Feature").append(std::to_string(featureCunter));
+			feature.opacity = globalOpacity;
+			feature.emission = globalEmission;
 			for (int j = 0; j < dimensions.x * dimensions.y; j++) {
 				if (contributingPositions[j].size() > 0 && bytes[j].r == 0.0f && bytes[j].g == 0.0f && bytes[j].b == 0.0f) {
 					float distanceNorm = glm::length(barycenters[j] - b0) + std::abs(v0 - spatialVariances[j]);
-						if (distanceNorm < radius) {
-							bytes[j].r = Crgb.r * globalEmission;
-							bytes[j].g = Crgb.g * globalEmission;
-							bytes[j].b = Crgb.b * globalEmission;
-						}
+					if (distanceNorm < radius) {
+						bytes[j].r = Crgb.r * globalEmission;
+						bytes[j].g = Crgb.g * globalEmission;
+						bytes[j].b = Crgb.b * globalEmission;
+						feature.elements.push_back(glm::ivec2(j % dimensions.x, j / dimensions.x));
+					}
 				}
+			}
+			if (0 < feature.elements.size()) {
+				features.push_back(feature);
+				featureCunter++;
 			}
 		}
 	}
@@ -368,9 +403,69 @@ void TransferFunction::gradientWeighted(glm::ivec2 dimensions, float globalOpaci
 	texture = new Texture2D(bytes, dimensions, 1, GL_RGBA, GL_FLOAT);
 }
 
+void TransferFunction::colorFeature(Feature& feature, glm::vec3 color)
+{
+	glm::ivec2 dimensions = getDimensions();
+	if (dimensions.x * dimensions.y == 0) {
+		return;
+	}
+	std::vector<glm::vec4> bytes = std::vector<glm::vec4>(dimensions.x * dimensions.y);
+	for (int i = 0; i < dimensions.x * dimensions.y; i++) {
+		bytes[i] = texture->getBytes()[i];
+	}
+	for (auto p : feature.elements) {
+		if (p.x < dimensions.x && p.y < dimensions.y) {
+			bytes[p.y * dimensions.x + p.x].r = color.r * feature.emission;
+			bytes[p.y * dimensions.x + p.x].g = color.g * feature.emission;
+			bytes[p.y * dimensions.x + p.x].b = color.b * feature.emission;
+			bytes[p.y * dimensions.x + p.x].a = sqrt(p.y / (float)dimensions.y) * feature.opacity;
+		}
+	}
+
+	if (texture != nullptr) {
+		delete texture;
+	}
+	texture = new Texture2D(bytes, dimensions, 1, GL_RGBA, GL_FLOAT);
+}
+
+bool TransferFunction::setFeatureVisibility(Feature& feature, bool visibility)
+{
+	if (feature.visible == visibility)
+		return false;
+	feature.visible = visibility;
+	colorFeature(feature, (visibility)? feature.color : glm::vec3(0,0,0));
+	return true;
+}
+
+bool TransferFunction::setFeatureOpacity(Feature& feature, float opacity)
+{
+	if (opacity == feature.opacity) {
+		return false;
+	}
+	feature.opacity = opacity;
+	if (!feature.visible) {
+		return false;
+	}
+	colorFeature(feature, feature.color);
+	return true;
+}
+
+Feature* TransferFunction::getFeatureFromPosition(glm::vec2 pos)
+{
+	glm::ivec2 dimensions = getDimensions();
+	glm::ivec2 iPos = glm::ivec2(dimensions.x * pos.x, dimensions.y * pos.y);
+	for (Feature& feature : features) {
+		if (std::find(feature.elements.begin(), feature.elements.end(), iPos) != feature.elements.end()) {
+			return &feature;
+		}
+	}
+	return nullptr;
+}
+
 void TransferFunction::operator=(TransferFunction& transferFunction)
 {
 	shader = transferFunction.shader;
+	features = transferFunction.features;
 	glm::ivec2 dim = transferFunction.getDimensions();
 	if (dim.x == 0 || dim.y == 0) {	// Clear if empty.
 		if (texture != nullptr) {
@@ -392,8 +487,68 @@ void TransferFunction::operator=(TransferFunction& transferFunction)
 
 void TransferFunction::setCamSpacePosition(glm::vec2 camPos)
 {
-	float aspectRatio = getDimensions().x / (float)getDimensions().y;
-	modelMatrix = glm::translate(glm::vec3(camPos.x, camPos.y, 0.0f)) * glm::scale(glm::vec3(0.5f, 0.2f, 1.0f));
-	invModelMatrix = glm::inverse(modelMatrix);
+	preferedCameraSpacePosition = camPos;
+}
+
+Feature* TransferFunction::findFeatureByName(const char* name) {
+	for (Feature& feature : features) {
+		if (std::string(name).compare(feature.name) == 0) {
+			return &feature;
+		}
+	}
+	return nullptr;
+}
+
+Feature* TransferFunction::nextFeature(Feature* current)
+{
+	if (features.empty()) {
+		return nullptr;
+	}
+	if (nullptr == current) {
+		return &features[0];
+	}
+	std::vector<Feature>::iterator iter = std::find(features.begin(), features.end(), *current);
+	iter++;
+	if (features.end() == iter) {
+		return &features[0];
+	}
+	return &*iter;
+}
+
+void TransferFunction::showAll()
+{
+	for (Feature& feature : features) {
+		feature.visible = true;
+		colorFeature(feature, feature.color);
+	}
+}
+
+static float timer = 0.0f;
+static bool prevVisible = false;
+void TransferFunction::animate(float dt)
+{
+	const float maxTime = 500.0f;
+	if (prevVisible != visible) {
+		prevVisible = visible;
+		timer = maxTime;
+	}
+	if (timer > 0.0f) {
+		if (visible) {
+			cameraSpacePosition = (1.0f - timer / maxTime) * preferedCameraSpacePosition
+				+ timer / maxTime * glm::vec2(0, -1.2);
+		}
+		else {
+			cameraSpacePosition = (timer / maxTime) * preferedCameraSpacePosition
+				+ (1.0f - timer / maxTime) * glm::vec2(0, -1.2);
+		}
+
+		timer -= dt;
+		if (timer < 0.0f) {
+			timer = 0.0f;
+		}
+		float aspectRatio = getDimensions().x / (float)getDimensions().y;
+		modelMatrix = glm::translate(glm::vec3(cameraSpacePosition.x, cameraSpacePosition.y, 0.0f)) * glm::scale(glm::vec3(0.5f, 0.2f, 1.0f));
+		invModelMatrix = glm::inverse(modelMatrix);
+	}
 
 }

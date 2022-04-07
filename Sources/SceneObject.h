@@ -16,7 +16,9 @@ protected:
 	Mesh* mesh = nullptr;		// Don't delete!
 	Shader* shader = nullptr;	// Don't delete!
 
-	glm::vec3 position;
+	glm::vec3 scale = glm::vec3(1.0f);
+	glm::vec3 eulerAngles = glm::vec3(0.0f);
+	glm::vec3 position = glm::vec3(0.0f);
 
 	Animation* animation = nullptr;
 
@@ -62,5 +64,16 @@ public:
 		return position;
 	}
 
+	void setScale(glm::vec3 s) {
+		scale = s;
+	}
+
+	glm::vec3 getScale() {
+		return scale;
+	}
+
+	void setEulerAngles(glm::vec3 angles) {
+		eulerAngles = angles;
+	}
 };
 

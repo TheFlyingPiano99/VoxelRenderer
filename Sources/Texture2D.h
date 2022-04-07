@@ -21,7 +21,7 @@ public:
 	GLuint unit;
 	const char* type;
 
-	Texture2D(const char* image, GLuint unit, GLenum format, GLenum pixelType);
+	Texture2D(const char* image, const char* type, GLuint unit, GLenum format, GLenum pixelType);
 
 	Texture2D(std::vector<glm::vec4> bytes, glm::ivec2 dimensions, GLuint unit, GLenum format, GLenum pixelType);
 

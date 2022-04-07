@@ -33,12 +33,12 @@ struct SceneObject {
 };
 uniform SceneObject sceneObject;
 
-
 void main()
 {
+	worldPos = sceneObject.modelMatrix * aPos;
 	Normal = (vec4(aNormal, 0.0) * sceneObject.invModelMatrix).xyz;
 	color = aColor;
 	texCoord = aTex;
 	
-	gl_Position = camera.viewProjMatrix * sceneObject.modelMatrix * aPos;
+	gl_Position = camera.viewProjMatrix * worldPos;
 }

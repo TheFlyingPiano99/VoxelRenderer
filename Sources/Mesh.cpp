@@ -1,6 +1,6 @@
 #include "Mesh.h"
 
-Mesh::Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture2D>& textures)
+Mesh::Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture2D*>& textures)
 {
 	Mesh::vertices = vertices;
 	Mesh::indices = indices;
@@ -36,7 +36,7 @@ void Mesh::Draw(Shader& shader, Camera& camera)
 	for (unsigned int i = 0; i < textures.size(); i++)
 	{
 		std::string num;
-		std::string type = textures[i].type;
+		std::string type = textures[i]->type;
 		if (type == "diffuse")
 		{
 			num = std::to_string(numDiffuse++);
@@ -45,13 +45,11 @@ void Mesh::Draw(Shader& shader, Camera& camera)
 		{
 			num = std::to_string(numSpecular++);
 		}
-		textures[i].texUnit(shader, (type + num).c_str(), i);
-		textures[i].Bind();
+		textures[i]->texUnit(shader, (type + num).c_str(), i);
+		textures[i]->Bind();
 	}
 	// Take care of the camera Matrix
-	glUniform3f(glGetUniformLocation(shader.ID, "camPos"), camera.eye.x, camera.eye.y, camera.eye.z);
-	camera.exportMatrix(shader);
-
+	camera.exportData(shader);
 	
 	glUniform1i(glGetUniformLocation(shader.ID, "useTexture"), textures.size() > 0);
 

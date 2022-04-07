@@ -67,7 +67,7 @@ void Scene::initQuadFBO()
 		delete quadDepthTexture;
 	}
 	quadColorTexture = new Texture2D(GL_RGBA, glm::ivec2(contextWidth, contextHeight), 0, GL_RGBA, GL_FLOAT);
-	quadDepthTexture = new Texture2D(GL_DEPTH_COMPONENT, glm::ivec2(contextWidth, contextHeight), 2, GL_DEPTH_COMPONENT, GL_FLOAT);
+	quadDepthTexture = new Texture2D(GL_DEPTH_COMPONENT, glm::ivec2(contextWidth, contextHeight), 6, GL_DEPTH_COMPONENT, GL_FLOAT);
 	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *quadColorTexture, 0);
 	quadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, *quadDepthTexture, 0);
 	RBO stencilRBO(GL_STENCIL_COMPONENTS, contextWidth, contextHeight);
@@ -100,7 +100,7 @@ void Scene::initQuad()
 	quadVAO.Unbind();
 }
 
-void Scene::initInfinitePlane()
+void Scene::initBasePlate()
 {
 	Shader* defaultIncrementalShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("default.vert").c_str(),
@@ -110,32 +110,32 @@ void Scene::initInfinitePlane()
 
 	std::vector<Vertex> infinitePlaneVertices;
 	std::vector<GLuint> infinitePlaneIndices;
-	std::vector<Texture2D> infinitePlaneTextures;
+	std::vector<Texture2D*> infinitePlaneTextures;
 
-	glm::vec3 color = glm::vec3(0.0f, 0.5f, 0.2f);
+	glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
 	Vertex v1;
 	v1.color = color;
 	v1.normal = glm::vec3(0.0f, 1.0f, 0.0f);
-	v1.position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	v1.texUV = glm::vec2(0.5f, 0.5f);
+	v1.position = glm::vec4(-1.0f, 0.0f, -1.0f, 1.0f);
+	v1.texUV = glm::vec2(0.0f, 1.0f);
 
 	Vertex v2;
 	v2.color = color;
 	v2.normal = glm::vec3(0.0f, 1.0f, 0.0f);
-	v2.position = glm::vec4(-10.0f, 0.0f, -10.0f, 0.0f);
-	v2.texUV = glm::vec2(0.0f, 1.0f);
+	v2.position = glm::vec4(1.0f, 0.0f, -1.0f, 1.0f);
+	v2.texUV = glm::vec2(1.0f, 1.0f);
 
 	Vertex v3;
 	v3.color = color;
 	v3.normal = glm::vec3(0.0f, 1.0f, 0.0f);
-	v3.position = glm::vec4(10.0f, 0.0f, -10.0f, 0.0f);
-	v3.texUV = glm::vec2(1.0f, 1.0f);
+	v3.position = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
+	v3.texUV = glm::vec2(1.0f, 0.0f);
 
 	Vertex v4;
 	v4.color = color;
 	v4.normal = glm::vec3(0.0f, 1.0f, 0.0f);
-	v4.position = glm::vec4(0.0f, 0.0f, 10.0f, 0.0f);
-	v4.texUV = glm::vec2(0.5f, 0.0f);
+	v4.position = glm::vec4(-1.0f, 0.0f, 1.0f, 1.0f);
+	v4.texUV = glm::vec2(0.0f, 0.0f);
 
 	infinitePlaneVertices.push_back(v1);
 	infinitePlaneVertices.push_back(v2);
@@ -149,26 +149,51 @@ void Scene::initInfinitePlane()
 	infinitePlaneIndices.push_back(2);
 	infinitePlaneIndices.push_back(0);
 
-	infinitePlaneIndices.push_back(1);
-	infinitePlaneIndices.push_back(3);
-	infinitePlaneIndices.push_back(0);
+	Texture2D* colorTexture = new Texture2D(AssetManager::getInstance()->getTextureFolderPath().append("planks.png").c_str(), "diffuse", 0, GL_RGBA, GL_UNSIGNED_BYTE);
+	Texture2D* specularTexture = new Texture2D(AssetManager::getInstance()->getTextureFolderPath().append("planksSpec.png").c_str(), "specular", 1, GL_RED, GL_UNSIGNED_BYTE);
+	colorSpecularTextures.push_back(colorTexture);
+	infinitePlaneTextures.push_back(colorTexture);
+	colorSpecularTextures.push_back(specularTexture);
+	infinitePlaneTextures.push_back(specularTexture);
 
-	SceneObject* infinitePlane = new SceneObject(new Mesh(infinitePlaneVertices, infinitePlaneIndices, infinitePlaneTextures),
+	SceneObject* plane = new SceneObject(new Mesh(infinitePlaneVertices, infinitePlaneIndices, infinitePlaneTextures),
 		defaultIncrementalShader);
-	sceneObjects.push_back(infinitePlane);
+	plane->setScale(glm::vec3(300, 1, 300));
+	sceneObjects.push_back(plane);
 
+
+	plane = new SceneObject(new Mesh(infinitePlaneVertices, infinitePlaneIndices, infinitePlaneTextures),
+		defaultIncrementalShader);
+	plane->setScale(glm::vec3(300, 1, 300));
+	plane->setEulerAngles(glm::vec3(3.14159265359f, 0.0f, 0.0f));
+	sceneObjects.push_back(plane);
 }
 
-void Scene::initCamera()
+void Scene::initCameraAndLights()
 {
-	camera = new Camera(contextWidth, contextHeight, glm::vec3(500.0f, 400.0f, 500.0f), glm::vec3(0, 300, 0));
+	camera = new Camera(contextWidth, contextHeight, glm::vec3(500.0f, 400.0f, -500.0f), glm::vec3(0, 256 / 2.0f, 0));
 	lights.push_back(Light());	// Headlight
 	lights[0].powerDensity = glm::vec3(headLightPower);
 	camera->moved = true;
-	lights.push_back(Light());	// Static light
-	lights[1].position = glm::vec4(0.0f, 300.0f, 300.0f, 1.0f);
-	lights[1].powerDensity = glm::vec3(10000.0f, 10000.0f, 10000.0f);
+	lights.push_back(Light());	// Directional light
+	lights[1].position = glm::normalize(glm::vec4(-1.0f, 1.0f, -1.0f, 0.0f));
+	lights[1].powerDensity = glm::vec3(0.9f, 0.9f, 0.9f);
 
+	lights.push_back(Light());	// X light
+	lights[2].position = glm::vec4(250.0f, 1.0f, 0.0f, 1.0f);
+	lights[2].powerDensity = glm::vec3(100.0f, 50.0f, 0.0f);
+
+	lights.push_back(Light());	// -X light
+	lights[3].position = glm::vec4(-250.0f, 1.0f, 0.0f, 1.0f);
+	lights[3].powerDensity = glm::vec3(100.0f, 50.0f, 0.0f);
+
+	lights.push_back(Light());	// Z light
+	lights[4].position = glm::vec4(0.0f, 1.0f, 250.0f, 1.0f);
+	lights[4].powerDensity = glm::vec3(0.0f, 50.0f, 100.0f);
+
+	lights.push_back(Light());	// -Z light
+	lights[5].position = glm::vec4(0.0f, 1.0f, -250.0f, 1.0f);
+	lights[5].powerDensity = glm::vec3(0.0f, 50.0f, 100.0f);
 }
 
 void Scene::initMeshesShadersObjects()
@@ -181,6 +206,10 @@ void Scene::initMeshesShadersObjects()
 	Shader* quadShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.frag").c_str()
+	);
+	Shader* quadDepthShader = new Shader(
+		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("quad-depth.frag").c_str()
 	);
 	Shader* boundingShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("bounding.vert").c_str(),
@@ -201,6 +230,7 @@ void Scene::initMeshesShadersObjects()
 
 	shaders.push_back(voxelShader);
 	shaders.push_back(quadShader);
+	shaders.push_back(quadDepthShader);
 	shaders.push_back(boundingShader);
 	shaders.push_back(flatColorBoundingShader);
 	shaders.push_back(transferShader);
@@ -227,7 +257,8 @@ void Scene::initMeshesShadersObjects()
 	if (selection > 2 || selection < 0) {
 		selection = 0;
 	}
-	voxels = new VoxelData(voxelShader, quadShader, boundingShader, flatColorBoundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
+	voxels = new VoxelData(voxelShader, quadDepthShader, boundingShader, flatColorBoundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
+	voxels->loadFeatures();
 }
 
 
@@ -254,8 +285,8 @@ void Scene::init(int contextWidth, int contextHeight)
 	this->contextHeight = contextHeight;
 	initQuadFBO();
 	initQuad();
-	//initInfinitePlane();
-	initCamera();
+	initBasePlate();
+	initCameraAndLights();
 	initMeshesShadersObjects();
 }
 
@@ -282,6 +313,11 @@ void Scene::destroy()
 	for (auto obj : sceneObjects) {
 		delete obj;
 	}
+	sceneObjects.clear();
+	for (auto texture : colorSpecularTextures) {
+		delete texture;
+	}
+	colorSpecularTextures.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -300,12 +336,10 @@ void Scene::control(float dt)
 
 void Scene::animate(float dt)
 {
-	if (!pause) {
-		for (auto obj : sceneObjects) {
-			obj->animate(dt);
-		}
-		voxels->animate(dt);
+	for (auto obj : sceneObjects) {
+		obj->animate(dt);
 	}
+	voxels->animate(dt);
 
 	glm::vec3 dir = glm::normalize(camera->center - camera->eye);
 	glm::vec3 right = glm::cross(dir, camera->prefUp);
@@ -333,13 +367,18 @@ void Scene::draw()
 	glStencilMask(0x00);
 
 
+	skybox->draw(*camera);
+	for (auto obj : sceneObjects) {
+		obj->update();
+		obj->draw(*camera, lights);
+	}
 	if (cameraMoved || voxels->popChanged()) {
 		partToDraw = 0;
 		voxels->drawBoundingGeometry(*camera, lights);
 		voxels->resetOpacity();
 	}
 	if (partToDraw >= 0) {
-		voxels->drawLayer(*camera, lights, *skybox, partToDraw, noOfPartsToDraw);
+		voxels->drawLayer(*camera, *quadDepthTexture, lights[0], *skybox, partToDraw, noOfPartsToDraw);
 		partToDraw++;
 		if (partToDraw == noOfPartsToDraw) {
 			partToDraw = -1;
@@ -347,10 +386,6 @@ void Scene::draw()
 	}
 
 	quadFBO.Bind();
-	skybox->draw(*camera);
-	for (auto obj : sceneObjects) {
-		obj->draw(*camera, lights);
-	}
 	if (partToDraw >= 0) {
 		voxels->drawBoundingGeometryOnScreen(*camera, (1.0f - std::powf(partToDraw / (float)noOfPartsToDraw, 0.2f)) * 0.3f);
 	}
@@ -401,4 +436,11 @@ void Scene::onContextResize(int contextWidth, int contextHeight)
 	}
 	initQuadFBO();
 	camera->moved = true;
+}
+
+void Scene::serialize()
+{
+	if (nullptr != voxels) {
+		voxels->saveFeatures();
+	}
 }

@@ -35,38 +35,6 @@ public:
 	void execute(Scene* scene, float dt) override;
 };
 
-class MoveCameraLeft : public ControlAction {
-public:
-	MoveCameraLeft() : ControlAction(GLFW_KEY_A) {
-	}
-
-	void execute(Scene* scene, float dt) override;
-};
-
-class MoveCameraRight : public ControlAction {
-public:
-	MoveCameraRight() : ControlAction(GLFW_KEY_D) {
-	}
-
-	void execute(Scene* scene, float dt) override;
-};
-
-class MoveCameraUp : public ControlAction {
-public:
-	MoveCameraUp() : ControlAction(GLFW_KEY_SPACE) {
-	}
-
-	void execute(Scene* scene, float dt) override;
-};
-
-class MoveCameraDown : public ControlAction {
-public:
-	MoveCameraDown() : ControlAction(GLFW_KEY_LEFT_CONTROL) {
-	}
-
-	void execute(Scene* scene, float dt) override;
-};
-
 class ToggleGUI : public ControlAction {
 public:
 	ToggleGUI() : ControlAction(GLFW_KEY_O, false) {
@@ -142,6 +110,22 @@ public:
 class ToggleFullScreenMode : public ControlAction {
 public:
 	ToggleFullScreenMode() : ControlAction(GLFW_KEY_TAB, true) {
+	}
+
+	void execute(Scene* scene, float dt) override;
+};
+
+class CycleFeatures : public ControlAction {
+public:
+	CycleFeatures() : ControlAction(GLFW_KEY_SPACE, false) {
+	}
+
+	void execute(Scene* scene, float dt) override;
+};
+
+class ToggleTransferFunction : public ControlAction {
+public:
+	ToggleTransferFunction() : ControlAction(GLFW_KEY_T, false) {
 	}
 
 	void execute(Scene* scene, float dt) override;

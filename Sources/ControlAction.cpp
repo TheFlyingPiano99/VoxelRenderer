@@ -29,38 +29,6 @@ void MoveCameraBackward::execute(Scene* scene, float dt)
 	}
 }
 
-void MoveCameraLeft::execute(Scene* scene, float dt)
-{
-	Camera* camera = scene->getCamera();
-	if (nullptr != camera) {
-		camera->moveLeft(dt);
-	}
-}
-
-void MoveCameraRight::execute(Scene* scene, float dt)
-{
-	Camera* camera = scene->getCamera();
-	if (nullptr != camera) {
-		camera->moveRight(dt);
-	}
-}
-
-void MoveCameraUp::execute(Scene* scene, float dt)
-{
-	Camera* camera = scene->getCamera();
-	if (nullptr != camera) {
-		camera->moveUp(dt);
-	}
-}
-
-void MoveCameraDown::execute(Scene* scene, float dt)
-{
-	Camera* camera = scene->getCamera();
-	if (nullptr != camera) {
-		camera->moveDown(dt);
-	}
-}
-
 void ToggleGUI::execute(Scene* scene, float dt)
 {
 	GUI::getInstance()->setVisible(!(GUI::getInstance()->isVisible()));
@@ -109,4 +77,17 @@ void RotateIntersectionPlaneNegY::execute(Scene* scene, float dt)
 void ToggleFullScreenMode::execute(Scene* scene, float dt)
 {
 	Callbacks::toggleFullScreen();
+}
+
+void CycleFeatures::execute(Scene* scene, float dt)
+{
+	VoxelData* data = scene->getVoxelData();
+	if (data != nullptr) {
+		data->cycleSelectedFeature();
+	}
+}
+
+void ToggleTransferFunction::execute(Scene* scene, float dt)
+{
+	scene->getVoxelData()->getTransferFunction()->toggleVisibility();
 }

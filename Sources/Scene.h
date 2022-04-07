@@ -40,18 +40,21 @@ class Scene
 	Texture2D* quadColorTexture = nullptr;
 	Texture2D* quadDepthTexture = nullptr;
 
+	std::vector<Texture2D*> colorSpecularTextures;
+
 	Scene(unsigned int contextWidth, unsigned int contextHeight) : contextWidth(contextWidth), contextHeight(contextHeight) {
 	}
 
 
 	void initQuadFBO();
 	void initQuad();
-	void initInfinitePlane();
-	void initCamera();
+	void initBasePlate();
+	void initCameraAndLights();
 	void initMeshesShadersObjects();
 
 public:
 	~Scene() {
+		serialize();
 		destroy();
 	}
 
@@ -77,5 +80,8 @@ public:
 	}
 
 	void onContextResize(int contextWidth, int contextHeight);
+	
+	void serialize();
+
 };
 

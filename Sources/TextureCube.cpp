@@ -12,6 +12,7 @@ TextureCube::TextureCube(std::vector<std::string>& images, GLuint unit)
 	// Flips the image so it appears right side up
 	//stbi_set_flip_vertically_on_load(true);
 	
+	stbi_set_flip_vertically_on_load(false);
 	for (int i = 0; i < 6; i++) {
 		unsigned char* imgBytes = stbi_load(images[i].c_str(), &widthImg, &heightImg, &numColCh, 0);
 		if (imgBytes == nullptr) {

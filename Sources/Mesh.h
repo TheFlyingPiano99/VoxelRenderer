@@ -15,12 +15,12 @@ class Mesh
 public:
 	std::vector <Vertex> vertices;
 	std::vector <GLuint> indices;
-	std::vector <Texture2D> textures;
+	std::vector <Texture2D*> textures;
 	// Store VAO in public so it can be used in the Draw function
 	VAO VAO;
 
 	// Initializes the mesh
-	Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture2D>& textures);
+	Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture2D*>& textures);
 
 	// Draws the mesh
 	void Draw(Shader& shader, Camera& camera);

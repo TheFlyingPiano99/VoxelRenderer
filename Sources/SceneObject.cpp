@@ -2,9 +2,13 @@
 #include<glm/gtc/type_ptr.hpp>
 #include<glm/gtx/rotate_vector.hpp>
 
-inline void SceneObject::update() {
+void SceneObject::update() {
 	modelMatrix = glm::mat4(1.0f);
-	modelMatrix = glm::translate(position);
+	modelMatrix = glm::translate(position) 
+		* glm::rotate(eulerAngles.x, glm::vec3(1,0,0)) 
+		* glm::rotate(eulerAngles.y, glm::vec3(0, 1, 0)) 
+		* glm::rotate(eulerAngles.z, glm::vec3(0, 0, 1))
+		* glm::scale(scale);
 	invModelMatrix = glm::inverse(modelMatrix);
 }
 
@@ -25,7 +29,10 @@ void SceneObject::draw(Camera& camera, std::vector<Light>& lights)
 		for (int i = 0; i < lights.size(); i++) {
 			lights[i].exportData(*shader, i);
 		}
-		glUniform1i(glGetUniformLocation(shader->ID, "lightCount"), lights.size());
+		glUniform1ui(glGetUniformLocation(shader->ID, "lightCount"), lights.size());
+		glUniform1f(glGetUniformLocation(shader->ID, "material.shininess"), 20.0f);
+		glUniform3f(glGetUniformLocation(shader->ID, "material.specularColor"), 1.0f, 1.0f, 1.0f);
+
 		glEnable(GL_CULL_FACE);
 		glEnable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);

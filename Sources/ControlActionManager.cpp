@@ -23,10 +23,6 @@ void ControlActionManager::registerDefault()
 {
 	registerAction(new MoveCameraForward());
 	registerAction(new MoveCameraBackward());
-	registerAction(new MoveCameraLeft());
-	registerAction(new MoveCameraRight());
-	registerAction(new MoveCameraUp());
-	registerAction(new MoveCameraDown());
 	registerAction(new ToggleGUI());
 	registerAction(new FastForward());
 	registerAction(new Rewind());
@@ -36,6 +32,8 @@ void ControlActionManager::registerDefault()
 	registerAction(new RotateIntersectionPlanePosY());
 	registerAction(new RotateIntersectionPlaneNegY());
 	registerAction(new ToggleFullScreenMode());
+	registerAction(new CycleFeatures());
+	registerAction(new ToggleTransferFunction());
 }
 
 void ControlActionManager::registerAction(ControlAction* toRegister)

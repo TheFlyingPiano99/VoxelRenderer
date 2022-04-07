@@ -41,7 +41,7 @@ void Camera::exportMatrix(Shader& shader)
 
 void Camera::exportData(Shader& shader)
 {
-	glUniform3f(glGetUniformLocation(shader.ID, "camera.eye"), eye.x, eye.y, eye.z);
+	glUniform3f(glGetUniformLocation(shader.ID, "camera.position"), eye.x, eye.y, eye.z);
 	glUniform3f(glGetUniformLocation(shader.ID, "camera.center"), center.x, center.y, center.z);
 	glm::vec3 lookDir = normalize(center - eye);
 	glm::vec3 right = normalize(cross(lookDir, prefUp));

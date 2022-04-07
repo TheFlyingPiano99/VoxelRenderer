@@ -10,14 +10,15 @@ layout (binding = 2) uniform sampler2D enterTexture;
 layout (binding = 3) uniform sampler2D exitTexture;
 layout (binding = 4) uniform sampler2D opacityTexture;
 layout (binding = 5) uniform samplerCube skybox;
+layout (binding = 6) uniform sampler2D targetDepthTexture;
 
-layout (binding = 6) uniform sampler2D lightExitTexture0;
-layout (binding = 7) uniform sampler2D lightExitTexture1;
-layout (binding = 8) uniform sampler2D lightExitTexture2;
-layout (binding = 9) uniform sampler2D lightExitTexture3;
-layout (binding = 10) uniform sampler2D lightExitTexture4;
-layout (binding = 11) uniform sampler2D lightExitTexture5;
-layout (binding = 12) uniform sampler2D lightExitTexture6;
+layout (binding = 7) uniform sampler2D lightExitTexture0;
+layout (binding = 8) uniform sampler2D lightExitTexture1;
+layout (binding = 9) uniform sampler2D lightExitTexture2;
+layout (binding = 10) uniform sampler2D lightExitTexture3;
+layout (binding = 11) uniform sampler2D lightExitTexture4;
+layout (binding = 12) uniform sampler2D lightExitTexture5;
+layout (binding = 13) uniform sampler2D lightExitTexture6;
 
 uniform vec3 resolution;
 uniform mat4 modelMatrix;
@@ -97,10 +98,19 @@ vec4 resampleGradientAndDensity(vec3 position, float intensity)
 }
 
 
-vec3 calculateLightLevel(vec3 modelPos, vec3 diffuseColor, vec3 specularColor, float shininess, Light light, vec3 gradient, vec3 modelEyePos) {
+vec3 calculateLightLevel(int lightIdx, vec3 modelPos, vec3 diffuseColor, vec3 specularColor, float shininess, Light light, vec3 gradient, vec3 modelEyePos) {
 	vec4 lightCameraSpaceCoord = light.viewProjMatrix * modelMatrix * vec4(modelPos, 1);
 	vec2 tex = (lightCameraSpaceCoord.xy / lightCameraSpaceCoord.w + vec2(1, 1)) / vec2(2.0, 2.0);
-	vec3 lightBeamEndPos = texture(lightExitTexture0, tex).xyz;
+	vec3 lightBeamEndPos;
+	switch(lightIdx) {
+		case 0: lightBeamEndPos	= texture(lightExitTexture0, tex).xyz; break;
+		case 1: lightBeamEndPos	= texture(lightExitTexture1, tex).xyz; break;
+		case 2: lightBeamEndPos	= texture(lightExitTexture2, tex).xyz; break;	
+		case 3: lightBeamEndPos	= texture(lightExitTexture3, tex).xyz; break;
+		case 4: lightBeamEndPos	= texture(lightExitTexture4, tex).xyz; break;
+		case 5: lightBeamEndPos	= texture(lightExitTexture5, tex).xyz; break;
+		case 6: lightBeamEndPos	= texture(lightExitTexture6, tex).xyz; break;
+	}
 	float distanceToBeamEndPos = length(lightBeamEndPos - modelPos);
 
 	float delta = distanceToBeamEndPos / float(shadowSamples + 1);
@@ -134,28 +144,25 @@ vec3 calculateLightLevel(vec3 modelPos, vec3 diffuseColor, vec3 specularColor, f
 
 vec4 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
 	float rayLength = length(cameraRay);
-	if (0.000001 < rayLength) {
-		vec3 currentPos = cameraRayStart + depth * cameraRay;
+	vec3 currentPos = cameraRayStart + depth * cameraRay;
+
+	//	Calculating depth
+	vec4 camSpace = camera.viewProjMatrix * modelMatrix * vec4(currentPos, 1);
+	camSpace = camSpace / camSpace.w;
+	camSpace.z = 0.5 * (camSpace.z + 1);
+
+	float targetDepth = texture(targetDepthTexture, texCoords).x;
+	if (0.000001 < rayLength && camSpace.z < targetDepth) {
 		vec4 color = vec4(0.0);
 		float delta = rayLength / float(stepCount);
 		float opacity = texture(opacityTexture, texCoords).x;
 		vec4 gradientIntesity = resampleGradientAndDensity(currentPos, trilinearInterpolation(currentPos));
 		vec4 colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));
 		vec3 lightLevel = vec3(0.0);
-		for (int i = 0; i < lightCount; i++) {
-			lightLevel += calculateLightLevel(currentPos, colorAttenuation.rgb, specularColor, shininess, lights[i], gradientIntesity.xyz, cameraRayStart);
-		}
-		vec3 viewDir = normalize(-cameraRay);
-		vec3 reflectionDir = reflect(-viewDir, normalize(-gradientIntesity.xyz));
-		lightLevel += ambientColor * texture(skybox, reflectionDir).rgb;
+		lightLevel += calculateLightLevel(0, currentPos, colorAttenuation.rgb, specularColor, shininess, lights[0], gradientIntesity.xyz, cameraRayStart);
 		color.rgb = delta * opacity * lightLevel;
 		color.a = colorAttenuation.a * delta;
-		/*	Calculating depth
-		vec4 camSpace = camera.viewProjMatrix * modelMatrix * vec4(currentPos, 1);
-		camSpace = camSpace / camSpace.w;
-		camSpace.z = 0.5 * (camSpace.z + 1);
 		gl_FragDepth = camSpace.z;
-		*/
 		opacity *= pow(1 - colorAttenuation.a, delta);
 		FragOpacity = vec4(opacity, 0, 0, 1);
 		return color;

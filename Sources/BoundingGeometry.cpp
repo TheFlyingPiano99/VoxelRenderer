@@ -331,6 +331,7 @@ void BoundingGeometry::drawOnScreen(Camera& camera, glm::mat4& modelMatrix, glm:
 	VAO.Bind();
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
+	glDepthMask(GL_FALSE);
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -343,4 +344,5 @@ void BoundingGeometry::drawOnScreen(Camera& camera, glm::mat4& modelMatrix, glm:
 	glUniform3f(glGetUniformLocation(flatColorShader->ID, "modelEye"), modelSpaceCameraPos.x, modelSpaceCameraPos.y, modelSpaceCameraPos.z);
 
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+	glDepthMask(GL_TRUE);
 }

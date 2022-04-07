@@ -13,16 +13,17 @@ in vec2 texCoord;
 
 uniform bool useTexture;
 
-uniform sampler2D colorTexture;
-
 struct Light {
 	vec4 position;
 	vec3 powerDensity;
 	mat4 viewProjMatrix;
 };
-
 uniform Light lights[16];
 uniform unsigned int lightCount;
+
+layout (binding=0) uniform sampler2D colorTexture;
+layout (binding=1) uniform	sampler2D specularTexture;
+layout (binding = 5) uniform samplerCube skybox;
 
 struct Material {
 	float shininess;
@@ -49,7 +50,7 @@ vec3 calculateLight(Light light, vec3 fragPos, vec3 normal, vec3 viewDir)
 
 	// diffuse lighting
 	vec3 lightDir = normalize(lightDiff);
-	float diffuseCos = max(dot(normal, lightDir), 0.0f);
+	float diffuseCos = max(dot(normal, lightDir), 0.0);
 	vec3 diffuse = diffuseCos * light.powerDensity * attenuation;
 	if (useTexture) {
 		diffuse *= texture(colorTexture, texCoord).xyz;
@@ -59,11 +60,21 @@ vec3 calculateLight(Light light, vec3 fragPos, vec3 normal, vec3 viewDir)
 	}
 
 	// specular lighting
-	vec3 reflectDir = reflect(-lightDir, normal);
-	float specularCos = pow(max(dot(viewDir, reflectDir), 0.0f), material.shininess);
-	vec3 specular = specularCos  * material.specularColor * light.powerDensity * attenuation;
+	vec3 halfway = normalize(lightDir + viewDir);
+	float specularCos = pow(max(dot(halfway, normal), 0.0), material.shininess);
+	vec3 specular = specularCos * light.powerDensity * attenuation;
+	if (useTexture) {
+		specular *= texture(specularTexture, texCoord).r;
+	}
+	else {
+		specular *= material.specularColor;
+	}
 
-	return diffuse + specular;
+	vec3 l = diffuse + specular;
+	if (length(l) > 0.0 && length(l) < 100000.0) {
+		return l;
+	}
+	return vec3(0.0);
 }
 
 
@@ -88,6 +99,7 @@ void main()
 	for (int i = 0; i < lightCount; i++) {
 		lightSum += calculateLight(lights[i], worldPos.xyz, normal, viewDir);
 	}
+	vec3 reflectDir = reflect(-viewDir, normal);
+	lightSum += 0.6 * texture(skybox, reflectDir).rgb * (1 - max(dot(viewDir, normal), 0.0) * 0.5) * texture(specularTexture, texCoord).r;
 	FragColor = vec4(lightSum, 1.0f);
-	FragColor = vec4(0.5,0.5, 0.5, 1.0);
 }

@@ -100,7 +100,7 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 
 	// Lights:
 	for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
-		lightTextures[i] = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 6 + i, GL_RGBA, GL_UNSIGNED_BYTE);
+		lightTextures[i] = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 7 + i, GL_RGBA, GL_UNSIGNED_BYTE);
 		lightFBOs[i].LinkTexture(GL_COLOR_ATTACHMENT0, *lightTextures[i], 0);
 
 		RBO lightRbo(GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
@@ -124,18 +124,17 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* quadShader, Shader* _bounding
 	gamma(0.98f),
 	boundingGeometry(_boundingShader, _flatColorBoundingShader),
 	transferFunction(_transferShader, quadVAO),
-	referenceSpatialTransferFunction(_transferShader, quadVAO),
 	scale(1.0f, 1.0f, 1.0f),
-	position(0.0f, 300.0f, 0.0f),
+	position(0.0f, 256 / 2.0f, 0.0f),
 	normal(0.0f, 0.0f, 1.0f),
 	up(0.0f, 1.0f, 0.0f),
 	animationEulerAngles(0.0f, 0.0f, 0.0f),
 	staticEulerAngles(0.0f, 0.0f, 0.0f),
 	shadowSamples(10),
 	quadVAO(quadVAO),
-	boundingGeometryTreshold(0.006f),
+	boundingGeometryTreshold(0.000000000001f),
 	transferFloodFillTreshold(4.0f),
-	STFradius(0.2f),
+	STFradius(0.25f),
 	STFEmission(1.0f),
 	STFOpacity(1.0f),
 	shininess(20.0f),
@@ -153,10 +152,7 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* quadShader, Shader* _bounding
 	}
 	
 	// Transfer function:
-	referenceSpatialTransferFunction.spatialTransferFunction(glm::ivec2(256, 128), *voxelTexture, STFradius, STFOpacity, STFEmission);
-	resetToDefault();
-	transferFunction.setCamSpacePosition(glm::vec2(0.5f, -0.8f));
-	referenceSpatialTransferFunction.setCamSpacePosition(glm::vec2(-0.5f, -0.8f));
+	transferFunction.setCamSpacePosition(glm::vec2(0.0f, -0.8f));
 
 	initFBOs(contextWidth, contextHeight);
 
@@ -186,6 +182,7 @@ VoxelData::~VoxelData() {
 
 void VoxelData::animate(float dt)
 {
+	transferFunction.animate(dt);
 	if (animation != nullptr) {
 		animationEulerAngles.y += dt * 0.0001;
 		updateMatrices();
@@ -228,11 +225,10 @@ void VoxelData::drawBoundingGeometryOnScreen(Camera& camera, float opacity)
 
 void VoxelData::drawTransferFunction() {
 	transferFunction.draw();
-	referenceSpatialTransferFunction.draw();
 }
 
 
-void VoxelData::drawLayer(Camera& camera, std::vector<Light>& lights, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount) 
+void VoxelData::drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount)
 {
 	unsigned int source = currentStep % 2;
 	unsigned int target = (currentStep + 1) % 2;
@@ -252,11 +248,8 @@ void VoxelData::drawLayer(Camera& camera, std::vector<Light>& lights, SkyBox& sk
 	voxelShader->Activate();
 	this->exportData();
 	camera.exportData(*voxelShader);
-	for (int i = 0; i < lights.size(); i++) {
-		lights[i].exportData(*voxelShader, i);
-	}
+	light.exportData(*voxelShader, 0);
 
-	glUniform1ui(glGetUniformLocation(voxelShader->ID, "lightCount"), lights.size());
 	glUniform1f(glGetUniformLocation(voxelShader->ID, "depth"), depth);
 	glUniform1ui(glGetUniformLocation(voxelShader->ID, "stepCount"), stepCount);
 	glActiveTexture(GL_TEXTURE0 + 5);
@@ -266,10 +259,9 @@ void VoxelData::drawLayer(Camera& camera, std::vector<Light>& lights, SkyBox& sk
 	transferFunction.Bind();
 	enterTexture->Bind();
 	exitTexture->Bind();
+	targetDepthTeture.Bind();
 	opacityTextures[source]->Bind();
-	for (int i = 0; i < lights.size(); i++) {
-		lightTextures[i]->Bind();
-	}
+	lightTextures[0]->Bind();
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	voxelTexture->Unbind();
@@ -330,6 +322,9 @@ void VoxelData::rotateIntersectionPlane(float rad)
 
 void VoxelData::selectTransferFunctionRegion(double xCamPos, double yCamPos)
 {
+	if (!transferFunction.isVisible()) {
+		return;
+	}
 	glm::vec4 camPos = glm::vec4(xCamPos, yCamPos, 0, 1);
 	glm::vec4 modelPos = transferFunction.getInvModelMatrix() * camPos;
 	glm::vec2 texCoords = glm::vec2(modelPos.x / 2.0f + 0.5f, 0.5f + modelPos.y / 2.0f);
@@ -338,50 +333,62 @@ void VoxelData::selectTransferFunctionRegion(double xCamPos, double yCamPos)
 		&& texCoords.y >= 0.0f && texCoords.y <= 1.0f) {
 		inBound = true;
 	}
-	else {
-		modelPos = referenceSpatialTransferFunction.getInvModelMatrix() * camPos;
-		texCoords = glm::vec2(modelPos.x / 2.0f + 0.5f, 0.5f + modelPos.y / 2.0f);
-		if (texCoords.x >= 0.0f && texCoords.x <= 1.0f
-			&& texCoords.y >= 0.0f && texCoords.y <= 1.0f) {
-			inBound = true;
-		}
-	}
 
 	if (inBound) {
 		if (std::string(currentTransferRegionSelectMode) == std::string(transferRegionSelectModes[0])) {
-			glm::vec3 color = referenceSpatialTransferFunction(texCoords);
-			transferFunction = referenceSpatialTransferFunction;
+			glm::vec3 color = transferFunction(texCoords);
 			transferFunction.floodFill(texCoords, glm::vec4(color.r, color.g, color.b, 1), transferFloodFillTreshold);
 			transferFunction.blur(3);
+			boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
+			changed = true;
 		}
 		else if (std::string(currentTransferRegionSelectMode) == std::string(transferRegionSelectModes[1])) {
+			transferFunction.clear();
 			transferFunction.crop(texCoords - glm::vec2(0.2, 0.3), texCoords + glm::vec2(0.2, 0.3));
+			boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
+			changed = true;
 		}
 		else if (std::string(currentTransferRegionSelectMode) == std::string(transferRegionSelectModes[2])) {
-			glm::vec3 color = referenceSpatialTransferFunction(texCoords);
-			transferFunction = referenceSpatialTransferFunction;
-			transferFunction.singleColor(color);
-			transferFunction.blur(3);
+			Feature* feature = transferFunction.getFeatureFromPosition(texCoords);
+			if (nullptr != feature) {
+				std::cout << "Selected: " << feature->name << std::endl;
+				std::cout << "Feature element count: " << feature->elements.size() << std::endl;
+				transferFunction.clear();
+				transferFunction.setFeatureVisibility(*feature, true);
+				if (selectedFeature != feature) {
+					selectedFeature = feature;
+					transferFunction.blur(3);
+					boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
+					changed = true;
+				}
+			}
 		}
 		else if (std::string(currentTransferRegionSelectMode) == std::string(transferRegionSelectModes[3])) {
-			glm::vec3 color = referenceSpatialTransferFunction(texCoords);
-			transferFunction.removeColor(color);
+			Feature* feature = transferFunction.getFeatureFromPosition(texCoords);
+			if (nullptr != feature) {
+				std::cout << "Removed: " << feature->name << std::endl;
+				std::cout << "Feature element count: " << feature->elements.size() << std::endl;
+				if (transferFunction.setFeatureVisibility(*feature, false)) {
+					transferFunction.blur(3);
+					boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
+					changed = true;
+				}
+			}
 		}
-		boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
 	}
-	changed = true;
 }
 
 void VoxelData::resetToSTF()
 {
-	referenceSpatialTransferFunction.spatialTransferFunction(glm::ivec2(256, 128), *voxelTexture, STFradius, STFOpacity, STFEmission);
-	transferFunction = referenceSpatialTransferFunction;
+	transferFunction.spatialTransferFunction(glm::ivec2(256, 128), *voxelTexture, STFradius, STFOpacity, STFEmission);
+	std::cout << "STF feature count: " << transferFunction.getFeatures().size() << std::endl;
 	boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
 	changed = true;
 }
 
 void VoxelData::resetToDefault()
 {
+	transferFunction.clear();
 	transferFunction.defaultTransferFunction(glm::ivec2(256, 128));
 	boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
 	changed = true;
@@ -414,6 +421,77 @@ bool VoxelData::popChanged() {
 	return prevChanged;
 }
 
+void VoxelData::setSelectedFeature(const char* name) {
+	selectedFeature = transferFunction.findFeatureByName(name);
+	transferFunction.clear();
+	if (selectedFeature != nullptr) {
+		if (transferFunction.setFeatureVisibility(*selectedFeature, true)) {
+			transferFunction.blur(3);
+			boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
+			changed = true;
+		};
+	}
+}
+
+void VoxelData::update()
+{
+	boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
+	changed = true;
+}
+
+void VoxelData::redrawSelected()
+{
+	transferFunction.clear();
+	transferFunction.setFeatureVisibility(*selectedFeature, true);
+	update();
+}
+
+void VoxelData::saveFeatures() {
+	std::ofstream stream("features.txt");
+	if (stream.is_open()) {
+		transferFunction.saveFeatures(stream);
+		stream.close();
+	}
+}
+
+TransferFunction* VoxelData::getTransferFunction() {
+	return &transferFunction;
+}
+
+Feature* VoxelData::getSelectedFeature() {
+	return selectedFeature;
+}
+
 void VoxelData::setAnimation(Animation* animation) {
 	this->animation = animation;
 }
+
+void VoxelData::cycleSelectedFeature() {
+	Feature* prevSelected = selectedFeature;
+	selectedFeature = transferFunction.nextFeature(selectedFeature);
+	if (prevSelected != selectedFeature) {
+		std::cout << "Next: " << selectedFeature->name << std::endl;
+		transferFunction.clear();
+		transferFunction.setFeatureVisibility(*selectedFeature, true);
+		transferFunction.blur(3);
+		update();
+	}
+}
+
+void VoxelData::showAll() {
+	transferFunction.showAll();
+	update();
+}
+
+
+void VoxelData::loadFeatures() {
+	std::ifstream stream("features.txt");
+	if (stream.is_open()) {
+		transferFunction.loadFeatures(stream);
+		stream.close();
+		selectedFeature = nullptr;
+		update();
+	}
+}
+
+

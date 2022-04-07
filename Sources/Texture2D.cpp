@@ -1,6 +1,6 @@
 #include "Texture2D.h"
 
-Texture2D::Texture2D(const char* image, GLuint unit, GLenum format, GLenum pixelType)
+Texture2D::Texture2D(const char* image, const char* type, GLuint unit, GLenum format, GLenum pixelType) : type(type)
 {
 
 	// Stores the width, height, and the number of color channels of the image
@@ -12,17 +12,17 @@ Texture2D::Texture2D(const char* image, GLuint unit, GLenum format, GLenum pixel
 
 	dimensions.x = widthImg;
 	dimensions.y = heightImg;
+	this->unit = unit;
 
 	// Generates an OpenGL texture object
 	glGenTextures(1, &ID);
 	// Assigns the texture to a Texture Unit
 	glActiveTexture(GL_TEXTURE0 + unit);
-	this->unit = unit;
 	glBindTexture(GL_TEXTURE_2D, ID);
 
 	// Configures the type of algorithm that is used to make the image smaller or bigger
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	// Configures the way the texture repeats (if it does at all)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
