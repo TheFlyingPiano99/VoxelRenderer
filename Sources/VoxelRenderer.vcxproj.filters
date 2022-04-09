@@ -90,9 +90,6 @@
     <ClCompile Include="AssetManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LightSource.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ISceneObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -227,9 +224,6 @@
     <ClInclude Include="ISceneObject.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
-    <ClInclude Include="LightSource.h">
-      <Filter>Header Files\Model</Filter>
-    </ClInclude>
     <ClInclude Include="MathUtil.h">
       <Filter>Header Files\Model</Filter>
     </ClInclude>
@@ -347,6 +341,9 @@
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="..\Resources\Shaders\skybox.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\Resources\Shaders\voxelHalfAngle.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
   </ItemGroup>

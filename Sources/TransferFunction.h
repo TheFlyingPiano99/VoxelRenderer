@@ -21,6 +21,9 @@ struct Feature {
 	}
 
 	void save(std::ostream& stream) {
+		if (name.compare("") == 0) {
+			return;
+		}
 		stream << "feature" << std::endl << std::endl;
 		stream << "name:" << name << std::endl;
 		stream << "color:" << color.r << ":" << color.g << ":" << color.b << std::endl;
@@ -39,9 +42,17 @@ struct Feature {
 		stream << "/feature" << std::endl << std::endl;
 	}
 
-	void load(std::istream& stream) {
+	/*
+	* Returns true if loading is successful.
+	*/
+	bool load(std::istream& stream) {
 		std::string line;
 		std::string delimiter = ":";
+		bool nameLoaded = false;
+		bool colorLoaded = false;
+		bool opacityLoaded = false;
+		bool emissionLoaded = false;
+		bool elementsLoaded = false;
 		while (std::getline(stream, line)) {
 			std::vector<std::string> tokens;
 			while (!line.empty()) {
@@ -52,17 +63,21 @@ struct Feature {
 			if (tokens.size() > 1) {
 				if (tokens[0].compare("name") == 0) {
 					name = tokens[1];
+					nameLoaded = true;
 				}
 				if (tokens[0].compare("color") == 0) {
 					color.x = std::stof(tokens[1]);
 					color.y = std::stof(tokens[2]);
 					color.z = std::stof(tokens[3]);
+					colorLoaded = true;
 				}
 				else if (tokens[0].compare("opacity") == 0) {
 					opacity = std::stof(tokens[1]);
+					opacityLoaded = true;
 				}
 				else if (tokens[0].compare("emission") == 0) {
 					emission = std::stof(tokens[1]);
+					emissionLoaded = true;
 				}
 				else if (tokens[0].compare("elements") == 0) {
 					elements.clear();
@@ -70,10 +85,11 @@ struct Feature {
 						glm::ivec2 v(std::stoi(tokens[i]), std::stoi(tokens[i + 1]));
 						elements.push_back(v);
 					}
+					elementsLoaded = true;
 				}
 			}
 			else if (tokens.size() > 0 && tokens[0].compare("/feature") == 0) {
-				break;
+				return nameLoaded && colorLoaded && opacityLoaded && emissionLoaded && elementsLoaded;
 			}
 		}
 	}
@@ -192,9 +208,10 @@ public:
 		while (std::getline(stream, line)) {
 			if (line.compare("feature")) {
 				Feature feature;
-				feature.load(stream);
-				feature.visible = false;
-				features.push_back(feature);
+				if (feature.load(stream)) {
+					feature.visible = false;
+					features.push_back(feature);
+				}
 			}
 		}
 	}

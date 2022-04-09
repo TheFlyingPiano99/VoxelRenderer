@@ -181,7 +181,6 @@
     <ClCompile Include="imgui\imgui_tables.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="ISceneObject.cpp" />
-    <ClCompile Include="LightSource.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Plane.cpp" />
@@ -228,7 +227,6 @@
     <ClInclude Include="imgui\imstb_textedit.h" />
     <ClInclude Include="imgui\imstb_truetype.h" />
     <ClInclude Include="ISceneObject.h" />
-    <ClInclude Include="LightSource.h" />
     <ClInclude Include="MathUtil.h" />
     <ClInclude Include="Plane.h" />
     <ClInclude Include="RBO.h" />
@@ -267,6 +265,7 @@
     <None Include="..\Resources\Shaders\transfer.frag" />
     <None Include="..\Resources\Shaders\transfer.vert" />
     <None Include="..\Resources\Shaders\voxel.frag" />
+    <None Include="..\Resources\Shaders\voxelHalfAngle.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

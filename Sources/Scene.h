@@ -34,7 +34,7 @@ class Scene
 	float cameraLastActive = 1000.0f;
 	unsigned int contextWidth, contextHeight;
 	int partToDraw = -1;
-	int noOfPartsToDraw = 256;
+	int noOfPartsToDraw = std::sqrt(256*256 + 256*256);
 
 	FBO quadFBO;
 	Texture2D* quadColorTexture = nullptr;

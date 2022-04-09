@@ -1,4 +1,6 @@
 #include "VoxelData.h"
+#include "AssetManager.h"
+
 #include <vector>
 #include<glm/gtc/type_ptr.hpp>
 #include<glm/gtc/matrix_transform.hpp>
@@ -114,8 +116,9 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 	quadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, *quadDepthTexture, 0);
 }
 
-VoxelData::VoxelData(Shader* _voxelShader, Shader* quadShader, Shader* _boundingShader, Shader* _flatColorBoundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
+VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngle, Shader* quadShader, Shader* _boundingShader, Shader* _flatColorBoundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
 		: voxelShader(_voxelShader),
+	voxelHalfAngleShader(_voxelHalfAngle),
 	quadShader(quadShader),
 	maxIntensity(255),
 	maxAttenuation(255),
@@ -208,7 +211,7 @@ void VoxelData::drawBoundingGeometry(Camera& camera, std::vector<Light>& lights)
 void VoxelData::resetOpacity()
 {
 	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[0], 0);
-	glClearColor(1, 0, 0, 1);
+	glClearColor(1, 1, 0, 1);
 	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT1 });
 	glClear(GL_COLOR_BUFFER_BIT);
 	// No need to clear the second opacityTexture, because it will be copied from the first texture.
@@ -262,6 +265,61 @@ void VoxelData::drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& l
 	targetDepthTeture.Bind();
 	opacityTextures[source]->Bind();
 	lightTextures[0]->Bind();
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	voxelTexture->Unbind();
+	transferFunction.Unbind();
+	enterTexture->Unbind();
+	exitTexture->Unbind();
+	opacityTextures[source]->Unbind();
+}
+
+void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount)
+{
+	unsigned int source = currentStep % 2;
+	unsigned int target = (currentStep + 1) % 2;
+	float assumedDiameter = glm::length(scale * glm::vec3(voxelTexture->dimensions.width, voxelTexture->dimensions.height, voxelTexture->dimensions.depth));
+	float delta = assumedDiameter / stepCount;
+	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[target], 0);
+
+	glm::vec3 halfway = glm::normalize(glm::normalize(camera.eye - position) 
+		+ glm::normalize(glm::vec3(light.position.x, light.position.y, light.position.z) - position));
+	glm::vec3 slicePosition = position - halfway * assumedDiameter * (currentStep / (float)stepCount - 0.5f);
+	if (glm::dot(halfway, camera.center - camera.eye) > 0.0) {
+		drawLayer(camera, targetDepthTeture, light, skybox, currentStep, stepCount);	// Use the standard algoritm
+		return;
+	}
+	quadFBO.Bind();
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_ALWAYS);
+	glEnable(GL_BLEND);
+	glBlendFunci(0, GL_ONE, GL_ONE);
+	glBlendFunci(1, GL_ONE, GL_ZERO);
+
+	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
+	quadVAO->Bind();
+	voxelHalfAngleShader->Activate();
+	this->exportData();
+	camera.exportData(*voxelHalfAngleShader);
+	light.exportData(*voxelHalfAngleShader, 0);
+
+	glm::vec4 slicePositionModelSpace = invModelMatrix * glm::vec4(slicePosition.x, slicePosition.y, slicePosition.z, 1.0);
+	slicePositionModelSpace = slicePositionModelSpace / slicePositionModelSpace.w;
+	glm::vec4 halfwayModelSpace = invModelMatrix * glm::vec4(halfway.x, halfway.y, halfway.z, 0.0);
+	glUniform3f(glGetUniformLocation(voxelHalfAngleShader->ID, "slicePosition"), slicePositionModelSpace.x, slicePositionModelSpace.y, slicePositionModelSpace.z);
+	glUniform3f(glGetUniformLocation(voxelHalfAngleShader->ID, "halfway"), halfwayModelSpace.x, halfwayModelSpace.y, halfwayModelSpace.z);
+	glUniform1f(glGetUniformLocation(voxelHalfAngleShader->ID, "delta"), delta);
+
+	glActiveTexture(GL_TEXTURE0 + 5);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.getTexture().ID);
+
+	voxelTexture->Bind();
+	transferFunction.Bind();
+	enterTexture->Bind();
+	exitTexture->Bind();
+	targetDepthTeture.Bind();
+	opacityTextures[source]->Bind();
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	voxelTexture->Unbind();
@@ -447,7 +505,7 @@ void VoxelData::redrawSelected()
 }
 
 void VoxelData::saveFeatures() {
-	std::ofstream stream("features.txt");
+	std::ofstream stream(AssetManager::getInstance()->getSavesFolderPath().append("/features.txt"));
 	if (stream.is_open()) {
 		transferFunction.saveFeatures(stream);
 		stream.close();
@@ -485,7 +543,7 @@ void VoxelData::showAll() {
 
 
 void VoxelData::loadFeatures() {
-	std::ifstream stream("features.txt");
+	std::ifstream stream(AssetManager::getInstance()->getSavesFolderPath().append("/features.txt"));
 	if (stream.is_open()) {
 		transferFunction.loadFeatures(stream);
 		stream.close();

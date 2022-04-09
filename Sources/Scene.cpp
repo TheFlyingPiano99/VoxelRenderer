@@ -203,6 +203,10 @@ void Scene::initMeshesShadersObjects()
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("voxel.frag").c_str()
 	);
+	Shader* voxelHalfAngleShader = new Shader(
+		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("voxelHalfAngle.frag").c_str()
+	);
 	Shader* quadShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.frag").c_str()
@@ -229,6 +233,7 @@ void Scene::initMeshesShadersObjects()
 	);
 
 	shaders.push_back(voxelShader);
+	shaders.push_back(voxelHalfAngleShader);
 	shaders.push_back(quadShader);
 	shaders.push_back(quadDepthShader);
 	shaders.push_back(boundingShader);
@@ -257,7 +262,7 @@ void Scene::initMeshesShadersObjects()
 	if (selection > 2 || selection < 0) {
 		selection = 0;
 	}
-	voxels = new VoxelData(voxelShader, quadDepthShader, boundingShader, flatColorBoundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
+	voxels = new VoxelData(voxelShader, voxelHalfAngleShader, quadDepthShader, boundingShader, flatColorBoundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
 	voxels->loadFeatures();
 }
 
@@ -345,8 +350,8 @@ void Scene::animate(float dt)
 	glm::vec3 right = glm::cross(dir, camera->prefUp);
 	glm::vec3 up = glm::cross(right, dir);
 	glm::vec3 p = voxels->getPosition() - dir * 200.0f + up * 200.0f +  right * 200.0f;
-	lights[0].position = glm::vec4(p.x, p.y, p.z, 1.0f);
-	lights[0].powerDensity = glm::vec3(headLightPower);
+	lights[0].position = glm::normalize(glm::vec4(p.x, p.y, p.z, 0.0f));
+	lights[0].powerDensity = glm::vec3(1, 1, 1);
 	static float prevPower;
 	if (prevPower != headLightPower) {
 		camera->moved = true;
@@ -378,7 +383,7 @@ void Scene::draw()
 		voxels->resetOpacity();
 	}
 	if (partToDraw >= 0) {
-		voxels->drawLayer(*camera, *quadDepthTexture, lights[0], *skybox, partToDraw, noOfPartsToDraw);
+		voxels->drawHalfAngleLayer(*camera, *quadDepthTexture, lights[0], *skybox, partToDraw, noOfPartsToDraw);
 		partToDraw++;
 		if (partToDraw == noOfPartsToDraw) {
 			partToDraw = -1;

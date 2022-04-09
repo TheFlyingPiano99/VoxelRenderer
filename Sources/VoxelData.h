@@ -18,6 +18,7 @@
 class VoxelData
 {
 	Shader* voxelShader = nullptr;	// Don't delete!
+	Shader* voxelHalfAngleShader = nullptr;	// Don't delete!
 	Shader* quadShader = nullptr;	// Don't delete!
 	Texture3D* voxelTexture = nullptr;
 	Texture2D* quadTexture = nullptr;
@@ -76,12 +77,13 @@ class VoxelData
 	void updateMatrices();
 
 public :
-	VoxelData(Shader* _shader, Shader* quadShader, Shader* boundingShader, Shader* _flatColorBoundingShader, Shader* transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight);
+	VoxelData(Shader* _shader, Shader* _voxelHalfAngle, Shader* quadShader, Shader* boundingShader, Shader* _flatColorBoundingShader, Shader* transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight);
 	~VoxelData();
 
 	void animate(float dt);
 	void control(float dt, bool paused, float cameraLastActive);
 	void drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount);
+	void drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount);
 	void drawQuad(Texture2D& targetDepthTexture);
 	void drawBoundingGeometry(Camera& camera, std::vector<Light>& lights);
 	void drawBoundingGeometryOnScreen(Camera& camera, float opacity);

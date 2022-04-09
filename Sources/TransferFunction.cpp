@@ -7,6 +7,7 @@
 
 
 TransferFunction::TransferFunction(Shader* shader, VAO* quad) : shader(shader), quadVAO(quad) {
+	features.clear();
 	defaultTransferFunction(glm::ivec2(256, 64));
 	setCamSpacePosition(glm::vec2(0.0f, -0.75f));
 }

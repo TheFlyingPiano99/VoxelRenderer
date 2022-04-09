@@ -1,5 +1,9 @@
 #version 420 core
 
+/*
+	Half angle method
+*/
+
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec4 FragOpacity;
 in vec2 texCoords;
@@ -28,10 +32,9 @@ uniform float shininess;
 uniform vec3 specularColor;
 uniform vec3 ambientColor;
 
-uniform unsigned int shadowSamples;
-uniform bool opacityMode;
-uniform float depth;
-uniform unsigned int stepCount;
+uniform vec3 slicePosition;
+uniform vec3 halfway;
+uniform float delta;
 
 struct Camera {
 	mat4 viewProjMatrix;
@@ -54,6 +57,11 @@ float noise(vec2 n) {
 	const vec2 d = vec2(0.0, 1.0);
   vec2 b = floor(n), f = smoothstep(vec2(0.0), vec2(1.0), fract(n));
 	return mix(mix(rand(b), rand(b + d.yx), f.x), mix(rand(b + d.xy), rand(b + d.yy), f.x), f.y);
+}
+
+vec3 intersectPlane(vec3 linePos, vec3 lineDir, vec3 planePos, vec3 planeNormal) {
+	float t = dot(planePos - linePos, planeNormal) / dot(lineDir, planeNormal);
+	return linePos + lineDir * t;
 }
 
 float trilinearInterpolation(vec3 currentPos) {
@@ -107,79 +115,75 @@ vec4 resampleGradientAndDensity(vec3 position, float intensity)
 }
 
 
-vec3 calculateLightLevel(int lightIdx, vec3 modelPos, vec3 diffuseColor, vec3 specularColor, float shininess, Light light, vec3 gradient, vec3 modelEyePos) {
-	vec4 lightCameraSpaceCoord = light.viewProjMatrix * modelMatrix * vec4(modelPos, 1);
-	vec2 tex = (lightCameraSpaceCoord.xy / lightCameraSpaceCoord.w + vec2(1, 1)) / vec2(2.0, 2.0);
-	vec3 lightBeamEndPos;
-	switch(lightIdx) {
-		case 0: lightBeamEndPos	= texture(lightExitTexture0, tex).xyz; break;
-		case 1: lightBeamEndPos	= texture(lightExitTexture1, tex).xyz; break;
-		case 2: lightBeamEndPos	= texture(lightExitTexture2, tex).xyz; break;	
-		case 3: lightBeamEndPos	= texture(lightExitTexture3, tex).xyz; break;
-		case 4: lightBeamEndPos	= texture(lightExitTexture4, tex).xyz; break;
-		case 5: lightBeamEndPos	= texture(lightExitTexture5, tex).xyz; break;
-		case 6: lightBeamEndPos	= texture(lightExitTexture6, tex).xyz; break;
-	}
-	float distanceToBeamEndPos = length(lightBeamEndPos - modelPos);
-
-	float delta = distanceToBeamEndPos / float(shadowSamples + 1) + 5.0 * noise(texCoords);
-	float distanceTravelled = delta;
-
-	vec4 lightSourceModelPos = invModelMatrix * light.position;
-	if (lightSourceModelPos.w > 0.000000001) {
-		lightSourceModelPos /= lightSourceModelPos.w;
-	}
-	vec3 toLightSource = lightSourceModelPos.xyz - modelPos * lightSourceModelPos.w;
-	vec3 lightDir = normalize(toLightSource);
-	vec3 samplePos = modelPos + lightDir * delta;
-	float disanceToLightSource = length(toLightSource);
-	if (lightSourceModelPos.w == 0.0) {
-		disanceToLightSource = 1.0;
-	}
-	float opacity = 1.0;
-	int i = 0;
-	while(distanceTravelled < distanceToBeamEndPos) {
-		vec4 gradientIntesity = resampleGradientAndDensity(samplePos, texture(voxels, samplePos).a);
-		opacity *= pow(1 - texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz))).a, delta);
-		samplePos += lightDir * delta;
-		distanceTravelled += delta;
-		i++;
-	}
+vec3 calculateLightLevel(
+	int lightIdx, 
+	vec3 modelPos, 
+	vec3 diffuseColor, 
+	vec3 specularColor, 
+	float shininess, 
+	Light light, 
+	vec3 gradient, 
+	vec3 modelEyePos, 
+	vec3 lightDiff,
+	float opacity
+) {
+	vec3 lightDir = normalize(lightDiff);
+	float lightDistance = length(lightDiff);
 	vec3 normal = normalize(-gradient);
 	vec3 viewDir = normalize(modelEyePos - modelPos);
 	vec3 reflectionDir = reflect(-viewDir, normal);
-	vec3 halfway = normalize(viewDir + lightDir);
-	float specularCos = pow(max(dot(normal, halfway), 0.0), shininess);
+	vec3 localHalfway = normalize(viewDir + lightDir);
+	float specularCos = pow(max(dot(normal, localHalfway), 0.0), shininess);
 	float diffuseCos = max(dot(normal, lightDir), 0.0);
-	vec3 intensity = opacity * light.powerDensity / disanceToLightSource / disanceToLightSource;
-	
+	vec3 intensity = opacity * light.powerDensity / lightDistance / lightDistance;
 	return diffuseColor * intensity * diffuseCos 
 		+ specularColor * intensity * specularCos * length(gradient);
 }
 
-vec4 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
-	float rayLength = length(cameraRay);
-	vec3 currentPos = cameraRayStart + depth * cameraRay;
-
+vec4 calculateColor(vec3 enter, vec3 exit) {
+	
+	vec3 position = intersectPlane(enter, normalize(exit - enter), slicePosition, halfway);
+	
 	//	Calculating depth
-	vec4 camSpace = camera.viewProjMatrix * modelMatrix * vec4(currentPos, 1);
+	vec4 camSpace = camera.viewProjMatrix * modelMatrix * vec4(position, 1);
 	camSpace = camSpace / camSpace.w;
-	camSpace.z = 0.5 * (camSpace.z + 1);
-
+	float depth = 0.5 * (camSpace.z + 1);
 	float targetDepth = texture(targetDepthTexture, texCoords).x;
-	if (0.000001 < rayLength && camSpace.z < targetDepth) {
+	if (length(exit - enter) > 0.00000001 
+		&& dot(normalize(position - enter), normalize(exit - enter)) > 0.0 
+		&& dot(normalize(position - exit), normalize(enter - exit)) > 0.0 
+		&& depth < targetDepth) {	// Test position validity
 		vec4 color = vec4(0.0);
-		float delta = rayLength / float(stepCount);
 		float opacity = texture(opacityTexture, texCoords).x;
-		vec4 gradientIntesity = resampleGradientAndDensity(currentPos, trilinearInterpolation(currentPos));
+		vec4 lightModelSpacePos = invModelMatrix * lights[0].position;
+		float lightDistance;
+		vec3 lightDiff;
+		if (lightModelSpacePos.w == 0.0) {
+			lightDiff = lightModelSpacePos.xyz - position * lights[0].position.w;
+			lightDistance = 1.0;
+		}
+		else {
+			lightModelSpacePos /= lightModelSpacePos.w;
+			lightDiff = lightModelSpacePos.xyz - position * lights[0].position.w;
+			lightDistance = length(lightDiff);
+		}
+		vec3 lightDir = normalize(lightDiff);
+		vec4 gradientIntesity = resampleGradientAndDensity(position, trilinearInterpolation(position));
 		vec4 colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));
+		vec3 opacitySampleModelSpacePos = intersectPlane(position, lightDir, position + delta * halfway, halfway);
+		vec4 opacitySampleCamSpacePos = camera.viewProjMatrix * modelMatrix * vec4(opacitySampleModelSpacePos, 1.0);
+		opacitySampleCamSpacePos /= opacitySampleCamSpacePos.w;
+		float lightDirOpacity = texture(opacityTexture, opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5)).y;
+
 		vec3 lightLevel = vec3(0.0);
-		lightLevel += calculateLightLevel(0, currentPos, colorAttenuation.rgb, specularColor, shininess, lights[0], gradientIntesity.xyz, cameraRayStart);
-		color.rgb = delta * opacity * lightLevel;
+		lightLevel += calculateLightLevel(0, position, colorAttenuation.rgb, specularColor, shininess, lights[0], gradientIntesity.xyz, enter, lightDiff, lightDirOpacity);
+		//lightLevel = vec3(0.0);
+		color.rgb = opacity * lightLevel * delta;
 		color.a = colorAttenuation.a * delta;
-		gl_FragDepth = camSpace.z;
+		gl_FragDepth = depth;
 		opacity *= pow(1 - colorAttenuation.a, delta);
-		FragOpacity = vec4(opacity, 0, 0, 1);
+		lightDirOpacity *= pow(1 - colorAttenuation.a, delta);
+		FragOpacity = vec4(opacity, lightDirOpacity, 0, 1);
 		return color;
 	}
 	else {
@@ -188,8 +192,8 @@ vec4 calculateColor(vec3 cameraRayStart, vec3 cameraRay) {
 	}
 }
 
-void main() {	
-	vec3 start = texture(enterTexture, texCoords).xyz;
-	vec3 ray = texture(exitTexture, texCoords).xyz - start;
-	FragColor = calculateColor(start, ray);
+void main() {
+	vec3 enter = texture(enterTexture, texCoords).xyz;
+	vec3 exit = texture(exitTexture, texCoords).xyz;
+	FragColor = calculateColor(enter, exit);
 }
