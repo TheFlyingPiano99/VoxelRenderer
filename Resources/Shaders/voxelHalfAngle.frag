@@ -31,6 +31,7 @@ uniform mat4 invModelMatrix;
 uniform float shininess;
 uniform vec3 specularColor;
 uniform vec3 ambientColor;
+uniform float translucency;
 
 uniform vec3 slicePosition;
 uniform vec3 halfway;
@@ -115,32 +116,35 @@ vec4 resampleGradientAndDensity(vec3 position, float intensity)
 }
 
 
-vec3 calculateLightLevel(
-	vec3 beamOffset, 
-	vec3 modelPos, 
+vec4 calculateLightLevel(
+	vec3 position, 
 	vec3 diffuseColor, 
 	vec3 specularColor, 
 	float shininess, 
 	Light light, 
 	vec3 gradient, 
 	vec3 modelEyePos, 
-	vec3 lightDiff,
-	float opacity
+	vec3 lightDiff
 ) {
-	vec3 lightDir = normalize(lightDiff + beamOffset);
+	vec3 lightDir = normalize(lightDiff);
+	vec3 opacitySampleModelSpacePos = intersectPlane(position, lightDir, position + delta * halfway, halfway);
+	vec4 opacitySampleCamSpacePos = camera.viewProjMatrix * modelMatrix * vec4(opacitySampleModelSpacePos, 1.0);
+	opacitySampleCamSpacePos /= opacitySampleCamSpacePos.w;
+	float lightDirAttenuation = texture(opacityTexture, opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5)).a;
+
 	float lightDistance = length(lightDiff);
 	if (light.position.w == 0.0) {
 		lightDistance = 1.0;
 	}
 	vec3 normal = normalize(-gradient);
-	vec3 viewDir = normalize(modelEyePos - modelPos);
+	vec3 viewDir = normalize(modelEyePos - position);
 	vec3 reflectionDir = reflect(-viewDir, normal);
 	vec3 localHalfway = normalize(viewDir + lightDir);
 	float specularCos = pow(max(dot(normal, localHalfway), 0.0), shininess);
 	float diffuseCos = max(dot(normal, lightDir), 0.0);
-	vec3 intensity = max((1 - opacity), 0) * light.powerDensity / lightDistance / lightDistance;
-	return diffuseColor * intensity * diffuseCos 
-		+ specularColor * intensity * specularCos * length(gradient);
+	vec3 intensity = max((1 - lightDirAttenuation), 0) * light.powerDensity / lightDistance / lightDistance;
+	return vec4(diffuseColor * intensity * diffuseCos 
+		+ specularColor * intensity * specularCos * length(gradient), lightDirAttenuation);
 }
 
 vec4 calculateColor(vec3 enter, vec3 exit) {
@@ -153,7 +157,6 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 	float depth = 0.5 * (camSpace.z + 1);
 	float targetDepth = texture(targetDepthTexture, texCoords).x;
 
-	//float opacity = texture(opacityTexture, texCoords).x;
 	vec4 lightModelSpacePos = invModelMatrix * lights[0].position;
 	float lightDistance;
 	vec3 lightDiff;
@@ -166,33 +169,37 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 		lightDiff = lightModelSpacePos.xyz - position * lights[0].position.w;
 		lightDistance = length(lightDiff);
 	}
+
 	vec3 lightDir = normalize(lightDiff);
 	vec3 opacitySampleModelSpacePos = intersectPlane(position, lightDir, position + delta * halfway, halfway);
 	vec4 opacitySampleCamSpacePos = camera.viewProjMatrix * modelMatrix * vec4(opacitySampleModelSpacePos, 1.0);
 	opacitySampleCamSpacePos /= opacitySampleCamSpacePos.w;
-	float lightDirAttenuation = texture(opacityTexture, opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5)).a;
-	vec4 color = vec4(0.0);
+	vec4 lightColor = texture(opacityTexture, opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5));
 
-	if (length(exit - enter) > 0.00000001 
-		&& dot(normalize(position - enter), normalize(exit - enter)) > 0.0 
-		&& dot(normalize(position - exit), normalize(enter - exit)) > 0.0 
+	vec4 color = vec4(0.0);
+	vec4 colorAttenuation = vec4(0.0);
+	if (length(exit - enter) > 0.00000001
+		&& dot(normalize(position - enter), normalize(exit - enter)) > 0.0 // Until no tesselletad slices
+		&& dot(normalize(position - exit), normalize(enter - exit)) > 0.0 // Until no tesselletad slices
 		&& depth < targetDepth) {	// Test position validity
 		vec4 gradientIntesity = resampleGradientAndDensity(position, trilinearInterpolation(position));
-		vec4 colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));
-		vec3 lightLevel = vec3(0.0);
-		vec2 p = position.xy;
-		lightLevel += calculateLightLevel(vec3(noise(p), noise(p), noise(p)), position, colorAttenuation.rgb, specularColor, shininess, lights[0], gradientIntesity.xyz, enter, lightDiff, lightDirAttenuation);
-		lightLevel += calculateLightLevel(vec3(noise(p), noise(p), noise(p)), position, colorAttenuation.rgb, specularColor, shininess, lights[0], gradientIntesity.xyz, enter, lightDiff, lightDirAttenuation);
-		lightLevel += calculateLightLevel(vec3(noise(p), noise(p), noise(p)), position, colorAttenuation.rgb, specularColor, shininess, lights[0], gradientIntesity.xyz, enter, lightDiff, lightDirAttenuation);
-		lightLevel /= 3.0;
+		colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));
 		vec3 viewDir = normalize(enter - exit);
 		float cosHalfway = dot(viewDir, halfway);
-		color.rgb = lightLevel * delta / cosHalfway;
-		color.a = colorAttenuation.a * delta / cosHalfway;
+		if (cosHalfway < 0.0) {
+			cosHalfway = dot(-viewDir, halfway);
+		}
+		if (cosHalfway == 0.0) {
+			cosHalfway = 1.0;
+		}
+		//vec2 p = position.xy;
+		//lightLevel += calculateLightLevel(position, colorAttenuation.rgb, specularColor, shininess, lights[0], gradientIntesity.xyz, enter, lightDiff);
+		color.rgb = min(max((1 - lightColor.rgb) * colorAttenuation.rgb * delta / cosHalfway, vec3(0)), vec3(1.0));
+		color.a = min(max(colorAttenuation.a * delta / cosHalfway, 0.0), 1.0);
+		lightColor = max(min(vec4(colorAttenuation.a * normalize(1 - colorAttenuation.rgb), 1) * delta / cosHalfway * translucency, vec4(1)), vec4(0.0));
 		gl_FragDepth = depth;
-		lightDirAttenuation += color.a;
 	}
-	FragOpacity = vec4(0, 0, 0, lightDirAttenuation);
+	FragOpacity = lightColor;
 	return color;
 }
 

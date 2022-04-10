@@ -129,8 +129,8 @@ void GUI::configToScene(Scene& scene)
 	if ( configFeature && scene.getVoxelData()->getSelectedFeature() != nullptr ) {
 		ImGui::Begin("Config feature");
 		ImGui::ColorEdit3("Color", &scene.getVoxelData()->getSelectedFeature()->color.x);
-		ImGui::SliderFloat("Opacity", &scene.getVoxelData()->getSelectedFeature()->opacity, 0.0f, 50.0f);
-		ImGui::SliderFloat("Emission", &scene.getVoxelData()->getSelectedFeature()->emission, 0.0f, 50.0f);
+		ImGui::SliderFloat("Opacity", &scene.getVoxelData()->getSelectedFeature()->opacity, 0.0f, 1.0f);
+		ImGui::SliderFloat("Emission", &scene.getVoxelData()->getSelectedFeature()->emission, 0.0f, 2.0f);
 		if (ImGui::Button("Finish", ImVec2(120, 50))) {
 			scene.getVoxelData()->redrawSelected();
 			configFeature = false;

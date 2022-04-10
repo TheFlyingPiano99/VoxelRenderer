@@ -15,6 +15,7 @@ void VoxelData::exportData(Shader* shader)
 	glUniform1f(glGetUniformLocation(shader->ID, "shininess"), shininess);
 	glUniform3f(glGetUniformLocation(shader->ID, "specularColor"), specularColor.r, specularColor.g, specularColor.b);
 	glUniform3f(glGetUniformLocation(shader->ID, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
+	glUniform1f(glGetUniformLocation(shader->ID, "translucency"), translucency);
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
 	glUniform1ui(glGetUniformLocation(shader->ID, "shadowSamples"), shadowSamples);
@@ -117,12 +118,12 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 }
 
 VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngle, Shader* quadShader, Shader* _boundingShader, Shader* _flatColorBoundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
-		: voxelShader(_voxelShader),
+	: voxelShader(_voxelShader),
 	voxelHalfAngleShader(_voxelHalfAngle),
 	quadShader(quadShader),
 	maxIntensity(255),
 	maxAttenuation(255),
-	plane(glm::vec3(100,100,50), glm::vec3(0,0,1)),
+	plane(glm::vec3(100, 100, 50), glm::vec3(0, 0, 1)),
 	exposure(1.1f),
 	gamma(0.98f),
 	boundingGeometry(_boundingShader, _flatColorBoundingShader),
@@ -142,7 +143,8 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngle, Shader* quad
 	STFOpacity(1.0f),
 	shininess(20.0f),
 	specularColor(0.56f, 0.56f, 0.5f),
-	ambientColor(0.005f, 0.005f, 0.005f)
+	ambientColor(0.005f, 0.005f, 0.005f),
+	translucency(10)
 	{
 	// Stores the width, height, and the number of color channels of the image
 	Dimensions dimensions;
@@ -208,13 +210,18 @@ void VoxelData::drawBoundingGeometry(Camera& camera, std::vector<Light>& lights)
 	boundingGeometry.draw(camera, lights, modelMatrix, invModelMatrix, enterFBO, exitFBO, lightFBOs);
 }
 
-void VoxelData::resetOpacity()
+void VoxelData::resetOpacity(Light& light)
 {
 	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[0], 0);
-	glClearColor(0, 0, 0, 0);
+	glClearColor(1 - light.powerDensity.r, 1 - light.powerDensity.g, 1 - light.powerDensity.b, 1);
 	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT1 });
 	glClear(GL_COLOR_BUFFER_BIT);
-	// No need to clear the second opacityTexture, because it will be copied from the first texture.
+
+	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[1], 0);
+	glClearColor(0, 0, 0, 1);
+	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT1 });
+	glClear(GL_COLOR_BUFFER_BIT);
+
 	glClearDepth(1.0f);
 	glClearColor(0, 0, 0, 0);
 	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0 });
@@ -282,21 +289,29 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	float delta = assumedDiameter / stepCount;
 	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[target], 0);
 
-	glm::vec3 halfway = glm::normalize(glm::normalize(camera.eye - position) 
-		+ glm::normalize(glm::vec3(light.position.x, light.position.y, light.position.z) - position));
+	glm::vec3 viewDir = glm::normalize(camera.eye - position);
+	glm::vec3 lightDir = glm::normalize(glm::vec3(light.position.x, light.position.y, light.position.z) - position);
+	glm::vec3 halfway;
+	if (glm::dot(viewDir, lightDir) < 0.0) {
+		halfway = glm::normalize(-viewDir + lightDir);
+	}
+	else {
+		halfway = glm::normalize(viewDir + lightDir);
+	}
+
 	glm::vec3 slicePosition = position - halfway * assumedDiameter * (currentStep / (float)stepCount - 0.5f);
 	quadFBO.Bind();
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_ALWAYS);
 	glEnable(GL_BLEND);
-	if (glm::dot(halfway, camera.center - camera.eye) > 0.0) {
+	if (glm::dot(viewDir, lightDir) < 0.0) {
 		glBlendFunci(0, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);	// Back to front
 	}
 	else {
 		glBlendFunci(0, GL_ONE_MINUS_DST_ALPHA, GL_ONE);	// Front to back
 	}
-	glBlendFunci(1, GL_ONE, GL_ZERO);
+	glBlendFunci(1, GL_ONE, GL_ONE_MINUS_SRC_COLOR);
 
 	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
 	quadVAO->Bind();

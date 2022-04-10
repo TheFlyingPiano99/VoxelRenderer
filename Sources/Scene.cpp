@@ -339,6 +339,7 @@ void Scene::control(float dt)
 	cameraLastActive += dt;
 }
 
+static bool first = true;
 void Scene::animate(float dt)
 {
 	for (auto obj : sceneObjects) {
@@ -346,12 +347,16 @@ void Scene::animate(float dt)
 	}
 	voxels->animate(dt);
 
-	glm::vec3 dir = glm::normalize(camera->center - camera->eye);
-	glm::vec3 right = glm::cross(dir, camera->prefUp);
-	glm::vec3 up = glm::cross(right, dir);
-	glm::vec3 p = voxels->getPosition() - dir * 200.0f + up * 200.0f +  right * 200.0f;
-	lights[0].position = glm::vec4(p.x, p.y, p.z, 1.0f);
-	lights[0].powerDensity = glm::vec3(headLightPower);
+		glm::vec3 dir = glm::normalize(camera->center - camera->eye);
+		glm::vec3 right = glm::cross(dir, camera->prefUp);
+		glm::vec3 up = glm::cross(right, dir);
+		glm::vec3 p = voxels->getPosition() - dir * 200.0f + up * 200.0f + right * 200.0f;
+		if (first) {
+			lights[0].position = glm::vec4(p.x, p.y, p.z, 1.0f);
+			first = false;
+		}
+		lights[0].powerDensity = glm::vec3(1.0);
+
 	static float prevPower;
 	if (prevPower != headLightPower) {
 		camera->moved = true;
@@ -380,7 +385,7 @@ void Scene::draw()
 	if (cameraMoved || voxels->popChanged()) {
 		partToDraw = 0;
 		voxels->drawBoundingGeometry(*camera, lights);
-		voxels->resetOpacity();
+		voxels->resetOpacity(lights[0]);
 	}
 	if (partToDraw >= 0) {
 		voxels->drawHalfAngleLayer(*camera, *quadDepthTexture, lights[0], *skybox, partToDraw, noOfPartsToDraw);

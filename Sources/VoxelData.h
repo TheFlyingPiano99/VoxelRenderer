@@ -60,6 +60,7 @@ class VoxelData
 	float shininess;
 	glm::vec3 specularColor;
 	glm::vec3 ambientColor;
+	float translucency;
 
 	unsigned int shadowSamples;
 
@@ -88,7 +89,7 @@ public :
 	void drawBoundingGeometry(Camera& camera, std::vector<Light>& lights);
 	void drawBoundingGeometryOnScreen(Camera& camera, float opacity);
 	void drawTransferFunction();
-	void resetOpacity();
+	void resetOpacity(Light& light);
 
 	void shiftIntersectionPlane(float delta);
 	void rotateIntersectionPlane(float rad);
