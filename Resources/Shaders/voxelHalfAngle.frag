@@ -37,6 +37,12 @@ uniform vec3 slicePosition;
 uniform vec3 halfway;
 uniform float delta;
 
+struct Plane {
+	vec3 position;
+	vec3 normal;
+};
+uniform Plane slicingPlane;
+
 struct Camera {
 	mat4 viewProjMatrix;
 };
@@ -174,11 +180,16 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 	vec3 opacitySampleModelSpacePos = intersectPlane(position, lightDir, position + delta * halfway, halfway);
 	vec4 opacitySampleCamSpacePos = camera.viewProjMatrix * modelMatrix * vec4(opacitySampleModelSpacePos, 1.0);
 	opacitySampleCamSpacePos /= opacitySampleCamSpacePos.w;
-	vec4 lightColor = texture(opacityTexture, opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5));
+	vec4 srcLightColor = texture(opacityTexture, opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5));
 
+	vec4 lightColor = vec4(0.0);
 	vec4 color = vec4(0.0);
 	vec4 colorAttenuation = vec4(0.0);
+	vec4 modelSpacePlanePos = invModelMatrix * vec4(slicingPlane.position, 1);
+	modelSpacePlanePos /= modelSpacePlanePos.w;
+	vec4 slicingPlaneModelNormal = vec4(slicingPlane.normal, 0) * modelMatrix;
 	if (length(exit - enter) > 0.00000001
+		&& dot(normalize(position - modelSpacePlanePos.xyz), slicingPlaneModelNormal.xyz) < 0.0
 		&& dot(normalize(position - enter), normalize(exit - enter)) > 0.0 // Until no tesselletad slices
 		&& dot(normalize(position - exit), normalize(enter - exit)) > 0.0 // Until no tesselletad slices
 		&& depth < targetDepth) {	// Test position validity
@@ -194,12 +205,12 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 		}
 		//vec2 p = position.xy;
 		//lightLevel += calculateLightLevel(position, colorAttenuation.rgb, specularColor, shininess, lights[0], gradientIntesity.xyz, enter, lightDiff);
-		color.rgb = min(max((1 - lightColor.rgb) * colorAttenuation.rgb * delta / cosHalfway, vec3(0)), vec3(1.0));
-		color.a = min(max(colorAttenuation.a * delta / cosHalfway, 0.0), 1.0);
-		lightColor = max(min(vec4(colorAttenuation.a * normalize(1 - colorAttenuation.rgb), 1) * delta / cosHalfway * translucency, vec4(1)), vec4(0.0));
+		color.rgb = max((1 - srcLightColor.rgb) * colorAttenuation.rgb * delta / cosHalfway, vec3(0));
+		color.a = max(colorAttenuation.a * delta / cosHalfway, 0.0);
+		lightColor = max(vec4(colorAttenuation.a * normalize(1 - colorAttenuation.rgb), 1) * delta / cosHalfway * translucency, vec4(0.0));
 		gl_FragDepth = depth;
 	}
-	FragOpacity = lightColor;
+	FragOpacity = lightColor + srcLightColor * (1 - lightColor);
 	return color;
 }
 

@@ -19,6 +19,7 @@ void VoxelData::exportData(Shader* shader)
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
 	glUniform1ui(glGetUniformLocation(shader->ID, "shadowSamples"), shadowSamples);
+	slicingPlane.exportData(shader, "slicingPlane");
 }
 
 bool VoxelData::readDimensions(const char* path, std::string& name, Dimensions& dimensions)
@@ -123,7 +124,6 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngle, Shader* quad
 	quadShader(quadShader),
 	maxIntensity(255),
 	maxAttenuation(255),
-	plane(glm::vec3(100, 100, 50), glm::vec3(0, 0, 1)),
 	exposure(1.1f),
 	gamma(0.98f),
 	boundingGeometry(_boundingShader, _flatColorBoundingShader),
@@ -144,7 +144,8 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngle, Shader* quad
 	shininess(20.0f),
 	specularColor(0.56f, 0.56f, 0.5f),
 	ambientColor(0.005f, 0.005f, 0.005f),
-	translucency(10)
+	translucency(1),
+	slicingPlane(glm::vec3(position), glm::vec3(1, 0, 0))
 	{
 	// Stores the width, height, and the number of color channels of the image
 	Dimensions dimensions;
@@ -311,7 +312,7 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	else {
 		glBlendFunci(0, GL_ONE_MINUS_DST_ALPHA, GL_ONE);	// Front to back
 	}
-	glBlendFunci(1, GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+	glBlendFunci(1, GL_ONE, GL_ZERO);
 
 	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
 	quadVAO->Bind();
@@ -381,7 +382,7 @@ void VoxelData::updateMatrices()
 
 void VoxelData::shiftIntersectionPlane(float delta)
 {
-	plane.setPoint(plane.getPoint() + delta * plane.getNormal());
+	slicingPlane.setPoint(slicingPlane.getPoint() + delta * slicingPlane.getNormal());
 	changed = true;
 }
 
@@ -389,8 +390,8 @@ void VoxelData::rotateIntersectionPlane(float rad)
 {
 	glm::mat4 M(1);
 	M = glm::rotate(M, rad, glm::vec3(0, 1, 0));
-	glm::vec4 rotated = M * glm::vec4(plane.getNormal(), 1);
-	plane.setNormal(rotated);
+	glm::vec4 rotated = M * glm::vec4(slicingPlane.getNormal(), 1);
+	slicingPlane.setNormal(rotated);
 	changed = true;
 }
 

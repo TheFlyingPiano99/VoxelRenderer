@@ -50,7 +50,6 @@ class VoxelData
 
 	float maxIntensity;
 	float maxAttenuation;
-	Plane plane;
 	float exposure, gamma;
 	std::string name;
 	float boundingGeometryTreshold;
@@ -61,6 +60,8 @@ class VoxelData
 	glm::vec3 specularColor;
 	glm::vec3 ambientColor;
 	float translucency;
+
+	Plane slicingPlane;
 
 	unsigned int shadowSamples;
 
