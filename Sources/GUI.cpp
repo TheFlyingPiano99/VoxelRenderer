@@ -44,7 +44,7 @@ void GUI::configToScene(Scene& scene)
 	ImGui::Begin("Settings");
 	ImGui::SliderFloat("Exposure", &scene.getVoxelData()->getExposure(), 0.0f, 2.0f);
 	ImGui::SliderFloat("Gamma", &scene.getVoxelData()->getGamma(), 0.0f, 1.0f);
-	ImGui::SliderFloat("Light power", &scene.getLightsPower(), 10000.0f, 100000.0f);
+	ImGui::SliderFloat("Light power", &scene.getLightsPower(), 100.0f, 100000.0f);
 
 	ImGui::SliderFloat("Bounding geometry threshold", &scene.getVoxelData()->getBoundingGeometryThreshold(), 0.0f, 0.01f);
 	ImGui::SliderFloat("Transfer function flood fill threshold", &scene.getVoxelData()->getTransferFloodFillThreshold(), 0.0f, 5.0f);

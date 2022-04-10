@@ -69,7 +69,7 @@ class VoxelData
 	Animation* animation = nullptr;
 	bool changed = true;
 
-	void exportData();
+	void exportData(Shader* shader);
 
 	bool readDimensions(const char* path, std::string& name, Dimensions& dimensions);
 	void initFBOs(unsigned int contextWidth, unsigned int contextHeight);

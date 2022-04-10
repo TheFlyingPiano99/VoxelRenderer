@@ -350,8 +350,8 @@ void Scene::animate(float dt)
 	glm::vec3 right = glm::cross(dir, camera->prefUp);
 	glm::vec3 up = glm::cross(right, dir);
 	glm::vec3 p = voxels->getPosition() - dir * 200.0f + up * 200.0f +  right * 200.0f;
-	lights[0].position = glm::normalize(glm::vec4(p.x, p.y, p.z, 0.0f));
-	lights[0].powerDensity = glm::vec3(1, 1, 1);
+	lights[0].position = glm::vec4(p.x, p.y, p.z, 1.0f);
+	lights[0].powerDensity = glm::vec3(headLightPower);
 	static float prevPower;
 	if (prevPower != headLightPower) {
 		camera->moved = true;

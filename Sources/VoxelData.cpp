@@ -7,17 +7,17 @@
 #include<glm/gtx/rotate_vector.hpp>
 
 
-void VoxelData::exportData()
+void VoxelData::exportData(Shader* shader)
 {
 	Dimensions dim = voxelTexture->getDimensions();
-	glUniform3f(glGetUniformLocation(voxelShader->ID, "resolution"),
+	glUniform3f(glGetUniformLocation(shader->ID, "resolution"),
 		dim.width , dim.height, dim.depth);
-	glUniform1f(glGetUniformLocation(voxelShader->ID, "shininess"), shininess);
-	glUniform3f(glGetUniformLocation(voxelShader->ID, "specularColor"), specularColor.r, specularColor.g, specularColor.b);
-	glUniform3f(glGetUniformLocation(voxelShader->ID, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
-	glUniformMatrix4fv(glGetUniformLocation(voxelShader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
-	glUniformMatrix4fv(glGetUniformLocation(voxelShader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
-	glUniform1ui(glGetUniformLocation(voxelShader->ID, "shadowSamples"), shadowSamples);
+	glUniform1f(glGetUniformLocation(shader->ID, "shininess"), shininess);
+	glUniform3f(glGetUniformLocation(shader->ID, "specularColor"), specularColor.r, specularColor.g, specularColor.b);
+	glUniform3f(glGetUniformLocation(shader->ID, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
+	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
+	glUniform1ui(glGetUniformLocation(shader->ID, "shadowSamples"), shadowSamples);
 }
 
 bool VoxelData::readDimensions(const char* path, std::string& name, Dimensions& dimensions)
@@ -249,7 +249,7 @@ void VoxelData::drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& l
 	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
 	quadVAO->Bind();
 	voxelShader->Activate();
-	this->exportData();
+	this->exportData(voxelShader);
 	camera.exportData(*voxelShader);
 	light.exportData(*voxelShader, 0);
 
@@ -300,7 +300,7 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
 	quadVAO->Bind();
 	voxelHalfAngleShader->Activate();
-	this->exportData();
+	this->exportData(voxelHalfAngleShader);
 	camera.exportData(*voxelHalfAngleShader);
 	light.exportData(*voxelHalfAngleShader, 0);
 
