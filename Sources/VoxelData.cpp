@@ -211,7 +211,7 @@ void VoxelData::drawBoundingGeometry(Camera& camera, std::vector<Light>& lights)
 void VoxelData::resetOpacity()
 {
 	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[0], 0);
-	glClearColor(1, 1, 0, 1);
+	glClearColor(0, 0, 0, 0);
 	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT1 });
 	glClear(GL_COLOR_BUFFER_BIT);
 	// No need to clear the second opacityTexture, because it will be copied from the first texture.
@@ -285,16 +285,17 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	glm::vec3 halfway = glm::normalize(glm::normalize(camera.eye - position) 
 		+ glm::normalize(glm::vec3(light.position.x, light.position.y, light.position.z) - position));
 	glm::vec3 slicePosition = position - halfway * assumedDiameter * (currentStep / (float)stepCount - 0.5f);
-	if (glm::dot(halfway, camera.center - camera.eye) > 0.0) {
-		drawLayer(camera, targetDepthTeture, light, skybox, currentStep, stepCount);	// Use the standard algoritm
-		return;
-	}
 	quadFBO.Bind();
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_ALWAYS);
 	glEnable(GL_BLEND);
-	glBlendFunci(0, GL_ONE, GL_ONE);
+	if (glm::dot(halfway, camera.center - camera.eye) > 0.0) {
+		glBlendFunci(0, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);	// Back to front
+	}
+	else {
+		glBlendFunci(0, GL_ONE_MINUS_DST_ALPHA, GL_ONE);	// Front to back
+	}
 	glBlendFunci(1, GL_ONE, GL_ZERO);
 
 	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
