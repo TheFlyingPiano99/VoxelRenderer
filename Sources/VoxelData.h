@@ -59,7 +59,6 @@ class VoxelData
 	float shininess;
 	glm::vec3 specularColor;
 	glm::vec3 ambientColor;
-	float translucency;
 
 	Plane slicingPlane;
 

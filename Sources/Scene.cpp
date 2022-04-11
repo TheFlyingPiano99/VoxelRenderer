@@ -355,7 +355,7 @@ void Scene::animate(float dt)
 			lights[0].position = glm::vec4(p.x, p.y, p.z, 1.0f);
 			first = false;
 		}
-		lights[0].powerDensity = glm::vec3(0.3);
+		lights[0].powerDensity = glm::vec3(headLightPower);
 
 	static float prevPower;
 	if (prevPower != headLightPower) {

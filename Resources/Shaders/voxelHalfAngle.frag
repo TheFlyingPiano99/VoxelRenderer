@@ -31,7 +31,6 @@ uniform mat4 invModelMatrix;
 uniform float shininess;
 uniform vec3 specularColor;
 uniform vec3 ambientColor;
-uniform float translucency;
 
 uniform vec3 slicePosition;
 uniform vec3 halfway;
@@ -122,35 +121,30 @@ vec4 resampleGradientAndDensity(vec3 position, float intensity)
 }
 
 
-vec4 calculateLightLevel(
-	vec3 position, 
+vec3 BlinnPhong(
 	vec3 diffuseColor, 
 	vec3 specularColor, 
 	float shininess, 
-	Light light, 
-	vec3 gradient, 
-	vec3 modelEyePos, 
-	vec3 lightDiff
+	vec3 normal,
+	vec3 viewDir, 
+	vec3 lightDir
 ) {
-	vec3 lightDir = normalize(lightDiff);
-	vec3 opacitySampleModelSpacePos = intersectPlane(position, lightDir, position + delta * halfway, halfway);
-	vec4 opacitySampleCamSpacePos = camera.viewProjMatrix * modelMatrix * vec4(opacitySampleModelSpacePos, 1.0);
-	opacitySampleCamSpacePos /= opacitySampleCamSpacePos.w;
-	float lightDirAttenuation = texture(opacityTexture, opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5)).a;
-
-	float lightDistance = length(lightDiff);
-	if (light.position.w == 0.0) {
-		lightDistance = 1.0;
-	}
-	vec3 normal = normalize(-gradient);
-	vec3 viewDir = normalize(modelEyePos - position);
-	vec3 reflectionDir = reflect(-viewDir, normal);
 	vec3 localHalfway = normalize(viewDir + lightDir);
 	float specularCos = pow(max(dot(normal, localHalfway), 0.0), shininess);
 	float diffuseCos = max(dot(normal, lightDir), 0.0);
-	vec3 intensity = max((1 - lightDirAttenuation), 0) * light.powerDensity / lightDistance / lightDistance;
-	return vec4(diffuseColor * intensity * diffuseCos 
-		+ specularColor * intensity * specularCos * length(gradient), lightDirAttenuation);
+	return diffuseColor * diffuseCos 
+		+ specularColor * specularCos;
+}
+
+vec3 BlurLight(vec2 texCoord, float offset, vec4 directLightAttenuation) {
+	vec4 sum = vec4(0);
+	int sampleCount = 5;
+	for (int i = 0; i < sampleCount; i++) {
+		sum += texture(opacityTexture, texCoord + offset * normalize(vec2(noise(vec2(i, i*i)), noise(vec2(i*i*i, i)))));	// rgb = indirect attenuation | a = direct attenuation
+	}
+	sum += directLightAttenuation * 3;
+	sum /= sampleCount + 3;
+	return sum.rgb;
 }
 
 vec4 calculateColor(vec3 enter, vec3 exit) {
@@ -180,21 +174,22 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 	vec3 opacitySampleModelSpacePos = intersectPlane(position, lightDir, position + delta * halfway, halfway);
 	vec4 opacitySampleCamSpacePos = camera.viewProjMatrix * modelMatrix * vec4(opacitySampleModelSpacePos, 1.0);
 	opacitySampleCamSpacePos /= opacitySampleCamSpacePos.w;
-	vec4 srcLightColor = texture(opacityTexture, opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5));
+	vec2 lightTexCoord = opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5);
+	vec4 dstLightAttenuation = texture(opacityTexture, lightTexCoord);	// rgb = indirect attenuation | a = direct attenuation
 
-	vec4 lightColor = vec4(0.0);
+	vec4 srcLightAttenuation = vec4(0.0);
 	vec4 color = vec4(0.0);
-	vec4 colorAttenuation = vec4(0.0);
+	vec4 colorAttenuation = vec4(0.0);	// xyz = Color | w = attenuation
 	vec4 modelSpacePlanePos = invModelMatrix * vec4(slicingPlane.position, 1);
 	modelSpacePlanePos /= modelSpacePlanePos.w;
 	vec4 slicingPlaneModelNormal = vec4(slicingPlane.normal, 0) * modelMatrix;
 	if (length(exit - enter) > 0.00000001
 		&& dot(normalize(position - modelSpacePlanePos.xyz), slicingPlaneModelNormal.xyz) < 0.0
-		&& dot(normalize(position - enter), normalize(exit - enter)) > 0.0 // Until no tesselletad slices
-		&& dot(normalize(position - exit), normalize(enter - exit)) > 0.0 // Until no tesselletad slices
-		&& depth < targetDepth) {	// Test position validity
-		vec4 gradientIntesity = resampleGradientAndDensity(position, trilinearInterpolation(position));
-		colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));
+		&& dot(normalize(position - enter), normalize(exit - enter)) > 0.0 //Use this until no tesselletad slices
+		&& dot(normalize(position - exit), normalize(enter - exit)) > 0.0 // Use this until no tesselletad slices
+		&& depth < targetDepth) {
+		vec4 gradientIntesity = resampleGradientAndDensity(position, trilinearInterpolation(position));	// xyz = gradient | w = intensity
+		colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));	// xyz = Color | w = attenuation
 		vec3 viewDir = normalize(enter - exit);
 		float cosHalfway = dot(viewDir, halfway);
 		if (cosHalfway < 0.0) {
@@ -203,14 +198,17 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 		if (cosHalfway == 0.0) {
 			cosHalfway = 1.0;
 		}
-		//vec2 p = position.xy;
-		//lightLevel += calculateLightLevel(position, colorAttenuation.rgb, specularColor, shininess, lights[0], gradientIntesity.xyz, enter, lightDiff);
-		color.rgb = max((1 - srcLightColor.rgb) * colorAttenuation.rgb * delta / cosHalfway, vec3(0));
+		vec3 bp = BlinnPhong(colorAttenuation.rgb, specularColor, shininess, normalize(-gradientIntesity.xyz), viewDir, lightDir);
+		float g = min(length(gradientIntesity.xyz), 1);	// Using gradient magnitude to interpolate between Blinn-Phong and diffuse color.
+		vec3 Cl = g * bp + (1 - g) * colorAttenuation.rgb;// Interpolate between Blinn-Phong and diffuse color
+		vec3 lightIntensity = lights[0].powerDensity;	// Assuming directional light
+		vec3 bluredLightAttenuation = BlurLight(lightTexCoord, 0.05 * delta / cosHalfway, dstLightAttenuation);
+		color.rgb = lightIntensity * (max(1 - dstLightAttenuation.a, 0) + max(1 - bluredLightAttenuation.rgb, vec3(0))) * Cl * delta / cosHalfway;	// L * (alpha + alpha_i) * C_l
 		color.a = max(colorAttenuation.a * delta / cosHalfway, 0.0);
-		lightColor = max(vec4(colorAttenuation.a * normalize(1 - colorAttenuation.rgb), 1) * delta / cosHalfway * translucency, vec4(0.0));
+		srcLightAttenuation = max(vec4(colorAttenuation.a * normalize(1 - colorAttenuation.rgb), colorAttenuation.a) * delta / cosHalfway, vec4(0.0));	// Calculate indirect (rgb) and direct (a) light attenuation
 		gl_FragDepth = depth;
 	}
-	FragOpacity = lightColor + srcLightColor * (1 - lightColor);
+	FragOpacity = srcLightAttenuation + dstLightAttenuation * (1 - srcLightAttenuation);	// Over operator
 	return color;
 }
 

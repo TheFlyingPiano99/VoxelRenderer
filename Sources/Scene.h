@@ -21,7 +21,7 @@ class Scene
 
 	Camera* camera = nullptr;
 	std::vector<Light> lights;
-	float headLightPower = 20000;
+	float headLightPower = 0.2;
 	std::vector<SceneObject*> sceneObjects;
 
 	VAO quadVAO;
@@ -34,7 +34,7 @@ class Scene
 	float cameraLastActive = 1000.0f;
 	unsigned int contextWidth, contextHeight;
 	int partToDraw = -1;
-	int noOfPartsToDraw = std::sqrt(256*256 + 256*256);
+	int noOfPartsToDraw = std::sqrt(256*256 + 256*256 + 256*256) * 1.1f;
 
 	FBO quadFBO;
 	Texture2D* quadColorTexture = nullptr;

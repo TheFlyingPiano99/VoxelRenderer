@@ -77,7 +77,7 @@ public:
 
 class ShiftIntersectionPlanePos : public ControlAction {
 public:
-	ShiftIntersectionPlanePos() : ControlAction(GLFW_KEY_M, true) {
+	ShiftIntersectionPlanePos() : ControlAction(GLFW_KEY_M, false) {
 	}
 
 	void execute(Scene* scene, float dt) override;
@@ -85,7 +85,7 @@ public:
 
 class ShiftIntersectionPlaneNeg : public ControlAction {
 public:
-	ShiftIntersectionPlaneNeg() : ControlAction(GLFW_KEY_N, true) {
+	ShiftIntersectionPlaneNeg() : ControlAction(GLFW_KEY_N, false) {
 	}
 
 	void execute(Scene* scene, float dt) override;

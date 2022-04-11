@@ -56,12 +56,12 @@ void ToggleGravitation::execute(Scene* scene, float dt)
 
 void ShiftIntersectionPlanePos::execute(Scene* scene, float dt)
 {
-	scene->getVoxelData()->shiftIntersectionPlane(0.1f * dt);
+	scene->getVoxelData()->shiftIntersectionPlane(10.0f);
 }
 
 void ShiftIntersectionPlaneNeg::execute(Scene* scene, float dt)
 {
-	scene->getVoxelData()->shiftIntersectionPlane(-0.1f * dt);
+	scene->getVoxelData()->shiftIntersectionPlane(-10.0f);
 }
 
 void RotateIntersectionPlanePosY::execute(Scene* scene, float dt)

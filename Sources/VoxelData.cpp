@@ -15,7 +15,6 @@ void VoxelData::exportData(Shader* shader)
 	glUniform1f(glGetUniformLocation(shader->ID, "shininess"), shininess);
 	glUniform3f(glGetUniformLocation(shader->ID, "specularColor"), specularColor.r, specularColor.g, specularColor.b);
 	glUniform3f(glGetUniformLocation(shader->ID, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
-	glUniform1f(glGetUniformLocation(shader->ID, "translucency"), translucency);
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
 	glUniform1ui(glGetUniformLocation(shader->ID, "shadowSamples"), shadowSamples);
@@ -141,10 +140,9 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngle, Shader* quad
 	STFradius(0.25f),
 	STFEmission(1.0f),
 	STFOpacity(1.0f),
-	shininess(20.0f),
+	shininess(10.0f),
 	specularColor(0.56f, 0.56f, 0.5f),
 	ambientColor(0.005f, 0.005f, 0.005f),
-	translucency(1),
 	slicingPlane(glm::vec3(position), glm::vec3(1, 0, 0))
 	{
 	// Stores the width, height, and the number of color channels of the image
@@ -214,7 +212,7 @@ void VoxelData::drawBoundingGeometry(Camera& camera, std::vector<Light>& lights)
 void VoxelData::resetOpacity(Light& light)
 {
 	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[0], 0);
-	glClearColor(1 - light.powerDensity.r, 1 - light.powerDensity.g, 1 - light.powerDensity.b, 1);
+	glClearColor(1 - light.powerDensity.r, 1 - light.powerDensity.g, 1 - light.powerDensity.b, 0);
 	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT1 });
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -299,8 +297,8 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	else {
 		halfway = glm::normalize(viewDir + lightDir);
 	}
-
-	glm::vec3 slicePosition = position - halfway * assumedDiameter * (currentStep / (float)stepCount - 0.5f);
+	delta *= abs(glm::dot(halfway, viewDir));
+	glm::vec3 slicePosition = position - halfway * abs(glm::dot(halfway, viewDir)) * assumedDiameter * (currentStep / (float)stepCount - 0.5f);
 	quadFBO.Bind();
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
@@ -430,9 +428,9 @@ void VoxelData::selectTransferFunctionRegion(double xCamPos, double yCamPos)
 				std::cout << "Feature element count: " << feature->elements.size() << std::endl;
 				transferFunction.clear();
 				transferFunction.setFeatureVisibility(*feature, true);
+				transferFunction.blur(3);
 				if (selectedFeature != feature) {
 					selectedFeature = feature;
-					transferFunction.blur(3);
 					boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
 					changed = true;
 				}
@@ -443,8 +441,9 @@ void VoxelData::selectTransferFunctionRegion(double xCamPos, double yCamPos)
 			if (nullptr != feature) {
 				std::cout << "Removed: " << feature->name << std::endl;
 				std::cout << "Feature element count: " << feature->elements.size() << std::endl;
-				if (transferFunction.setFeatureVisibility(*feature, false)) {
-					transferFunction.blur(3);
+				bool update = transferFunction.setFeatureVisibility(*feature, false);
+				transferFunction.blur(3);
+				if (update) {
 					boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
 					changed = true;
 				}
@@ -518,6 +517,7 @@ void VoxelData::redrawSelected()
 {
 	transferFunction.clear();
 	transferFunction.setFeatureVisibility(*selectedFeature, true);
+	transferFunction.blur(3);
 	update();
 }
 
