@@ -566,6 +566,9 @@ void VoxelData::saveFeatures() {
 	std::ofstream stream(AssetManager::getInstance()->getSavesFolderPath().append("/features.txt"));
 	if (stream.is_open()) {
 		transferFunction.saveFeatures(stream);
+		for (FeatureGroup& group : featureGroups) {
+			group.save(stream);
+		}
 		stream.close();
 	}
 }
@@ -603,7 +606,8 @@ void VoxelData::showAll() {
 void VoxelData::loadFeatures() {
 	std::ifstream stream(AssetManager::getInstance()->getSavesFolderPath().append("/features.txt"));
 	if (stream.is_open()) {
-		transferFunction.loadFeatures(stream);
+		featureGroups.clear();
+		transferFunction.loadFeatures(stream, featureGroups);
 		stream.close();
 		selectedFeature = nullptr;
 		update();

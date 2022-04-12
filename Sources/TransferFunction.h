@@ -24,7 +24,7 @@ struct Feature {
 		if (name.compare("") == 0) {
 			return;
 		}
-		stream << "feature" << std::endl << std::endl;
+		stream << "feature" << std::endl;
 		stream << "name:" << name << std::endl;
 		stream << "color:" << color.r << ":" << color.g << ":" << color.b << std::endl;
 		stream << "opacity:" << opacity << std::endl;
@@ -98,6 +98,57 @@ struct Feature {
 struct FeatureGroup {
 	std::vector<Feature*> features;
 	std::string name;
+
+	void save(std::ostream& stream) {
+		if (name.compare("") == 0) {
+			return;
+		}
+		stream << "featureGroup" << std::endl;
+		stream << "name:" << name << std::endl;
+		stream << "features:";
+		for (int i = 0; i < features.size(); i++) {
+			stream << features[i]->name;
+			if (i < features.size() - 1) {
+				stream << ":";
+			}
+		}
+		stream << std::endl;
+		stream << "/featureGroup" << std::endl << std::endl;
+	}
+
+	bool load(std::istream& stream, std::vector<Feature>& features) {
+		std::string line;
+		std::string delimiter = ":";
+		bool nameLoaded = false;
+		bool featuresLoaded = false;
+		while (std::getline(stream, line)) {
+			std::vector<std::string> tokens;
+			while (!line.empty()) {
+				tokens.push_back(line.substr(0, line.find(delimiter)));
+				line.erase(0, (*tokens.rbegin()).length());
+				line.erase(0, line.find(delimiter) + delimiter.length());
+			}
+			if (tokens.size() > 1) {
+				if (tokens[0].compare("name") == 0) {
+					name = tokens[1];
+					nameLoaded = true;
+				}
+				else if (tokens[0].compare("features") == 0) {
+					for (int i = 1; i < tokens.size(); i++) {
+						for (int j = 0; j < features.size(); j++) {
+							if (features[j].name.compare(tokens[i]) == 0) {
+								this->features.push_back(&features[j]);
+							}
+						}
+					}
+					featuresLoaded = true;
+				}
+				else if (tokens[0].compare("/featureGroup")) {
+					return nameLoaded && featuresLoaded;
+				}
+			}
+		}
+	}
 };
 
 class TransferFunction
@@ -209,15 +260,21 @@ public:
 		}
 	}
 
-	void loadFeatures(std::istream& stream) {
+	void loadFeatures(std::istream& stream, std::vector<FeatureGroup>& groups) {
 		features.clear();
 		std::string line;
 		while (std::getline(stream, line)) {
-			if (line.compare("feature")) {
+			if (line.compare("feature") == 0) {
 				Feature feature;
 				if (feature.load(stream)) {
 					feature.visible = false;
 					features.push_back(feature);
+				}
+			}
+			else if (line.compare("featureGroup") == 0) {
+				FeatureGroup group;
+				if (group.load(stream, features)) {
+					groups.push_back(group);
 				}
 			}
 		}
