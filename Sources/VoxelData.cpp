@@ -143,8 +143,9 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngle, Shader* quad
 	shininess(10.0f),
 	specularColor(0.56f, 0.56f, 0.5f),
 	ambientColor(0.005f, 0.005f, 0.005f),
-	slicingPlane(glm::vec3(position), glm::vec3(1, 0, 0))
-	{
+	slicingPlane(glm::vec3(position), glm::vec3(1, 0, 0)) {
+
+	featureGroups.clear();
 	// Stores the width, height, and the number of color channels of the image
 	Dimensions dimensions;
 	if (readDimensions(std::string(directory).append("dimensions.txt").c_str(), name, dimensions)) {
@@ -519,6 +520,46 @@ void VoxelData::redrawSelected()
 	transferFunction.setFeatureVisibility(*selectedFeature, true);
 	transferFunction.blur(3);
 	update();
+}
+
+static int nextGroupIdx = 1;
+void VoxelData::createFeatureGroup()
+{
+	FeatureGroup group;
+	group.features.clear();
+	group.name = std::string("Group").append(std::to_string(nextGroupIdx++));
+	featureGroups.push_back(group);
+}
+
+void VoxelData::addSelectedFeatureToFeatureGroup() 
+{
+	if (nullptr != selectedFeature && nullptr != selectedFeatureGroup) {
+		if (std::find(selectedFeatureGroup->features.begin(), selectedFeatureGroup->features.end(), selectedFeature) == selectedFeatureGroup->features.end()) {
+				selectedFeatureGroup->features.push_back(selectedFeature);
+		}
+	}
+}
+
+void VoxelData::removeSelectedFeatureFromFeatureGroup()
+{
+	if (nullptr != selectedFeature && nullptr != selectedFeatureGroup) {
+		selectedFeatureGroup->features.erase(std::find(selectedFeatureGroup->features.begin(),
+			selectedFeatureGroup->features.end(), 
+			selectedFeature));
+	}
+}
+
+void VoxelData::showSelectedFeatureGroup()
+{
+	if (nullptr != selectedFeatureGroup) {
+		transferFunction.clear();
+		for (Feature* feature : selectedFeatureGroup->features) {
+			feature->visible = true;
+		}
+		transferFunction.showVisible();
+		transferFunction.blur(3);
+		update();
+	}
 }
 
 void VoxelData::saveFeatures() {

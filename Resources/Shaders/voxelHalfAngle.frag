@@ -188,7 +188,8 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 		&& dot(normalize(position - enter), normalize(exit - enter)) > 0.0 //Use this until no tesselletad slices
 		&& dot(normalize(position - exit), normalize(enter - exit)) > 0.0 // Use this until no tesselletad slices
 		&& depth < targetDepth) {
-		vec4 gradientIntesity = resampleGradientAndDensity(position, trilinearInterpolation(position));	// xyz = gradient | w = intensity
+		vec3 offset = 0.5 * vec3(noise(position.xy), noise(position.yz), noise(position.zx));
+		vec4 gradientIntesity = resampleGradientAndDensity(position + offset, trilinearInterpolation(position + offset));	// xyz = gradient | w = intensity
 		colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));	// xyz = Color | w = attenuation
 		vec3 viewDir = normalize(enter - exit);
 		float cosHalfway = dot(viewDir, halfway);

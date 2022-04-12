@@ -524,6 +524,15 @@ void TransferFunction::showAll()
 	}
 }
 
+void TransferFunction::showVisible()
+{
+	for (Feature& feature : features) {
+		if (feature.visible) {
+			colorFeature(feature, feature.color);
+		}
+	}
+}
+
 static float timer = 0.0f;
 static bool prevVisible = false;
 void TransferFunction::animate(float dt)

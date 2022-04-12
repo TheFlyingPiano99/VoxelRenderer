@@ -37,6 +37,8 @@ class VoxelData
 	BoundingGeometry boundingGeometry;
 	TransferFunction transferFunction;
 	Feature* selectedFeature = nullptr;
+	std::vector<FeatureGroup> featureGroups;
+	FeatureGroup* selectedFeatureGroup;
 
 	glm::vec3 scale;
 	glm::vec3 position;
@@ -177,5 +179,29 @@ public :
 	void saveFeatures();
 
 	void loadFeatures();
+
+	void createFeatureGroup();
+
+	std::vector<FeatureGroup>& getFeatureGroups() {
+		return featureGroups;
+	}
+
+	void addSelectedFeatureToFeatureGroup();
+
+	void removeSelectedFeatureFromFeatureGroup();
+
+	void showSelectedFeatureGroup();
+
+	FeatureGroup* getSelectedFeatureGroup() {
+		return selectedFeatureGroup;
+	}
+
+	void setSelectedFeatureGroup(const char* name) {
+		for (FeatureGroup& group : featureGroups) {
+			if (group.name.compare(name) == 0) {
+				selectedFeatureGroup = &group;
+			}
+		}
+	}
 };
 

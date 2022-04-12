@@ -69,7 +69,7 @@ void GUI::configToScene(Scene& scene)
 
 	current_item = (scene.getVoxelData()->getSelectedFeature() != nullptr) ?
 		scene.getVoxelData()->getSelectedFeature()->name.c_str() : "Select feature";
-	std::vector<Feature> features = scene.getVoxelData()->getTransferFunction()->getFeatures();
+	std::vector<Feature>& features = scene.getVoxelData()->getTransferFunction()->getFeatures();
 
 	if (ImGui::BeginCombo("Feature", current_item)) // The second parameter is the label previewed before opening the combo.
 	{
@@ -83,6 +83,28 @@ void GUI::configToScene(Scene& scene)
 			if (ImGui::Selectable(features[n].name.c_str(), is_selected)) {
 				current_item = features[n].name.c_str();
 				scene.getVoxelData()->setSelectedFeature(current_item);
+			}
+			if (is_selected) {
+				ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+			}
+		}
+		ImGui::EndCombo();
+	}
+
+	current_item = (scene.getVoxelData()->getSelectedFeatureGroup() != nullptr) ?
+		scene.getVoxelData()->getSelectedFeatureGroup()->name.c_str() : "Select group";
+	std::vector<FeatureGroup>& groups = scene.getVoxelData()->getFeatureGroups();
+	if (ImGui::BeginCombo("Feature group", current_item)) // The second parameter is the label previewed before opening the combo.
+	{
+		for (int n = 0;
+			n < scene.getVoxelData()
+			->getFeatureGroups().size();
+			n++)
+		{
+			bool is_selected = (current_item == groups[n].name.c_str()); // You can store your selection however you want, outside or inside your objects
+			if (ImGui::Selectable(groups[n].name.c_str(), is_selected)) {
+				current_item = groups[n].name.c_str();
+				scene.getVoxelData()->setSelectedFeatureGroup(current_item);
 			}
 			if (is_selected) {
 				ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
@@ -109,6 +131,23 @@ void GUI::configToScene(Scene& scene)
 	if (ImGui::Button("Load features", ImVec2(120, 50))) {
 		scene.getVoxelData()->loadFeatures();
 	}
+
+	if (ImGui::Button("Create group", ImVec2(120, 50))) {
+		scene.getVoxelData()->createFeatureGroup();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Show group", ImVec2(120, 50))) {
+		scene.getVoxelData()->showSelectedFeatureGroup();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Add feature", ImVec2(120, 50))) {
+		scene.getVoxelData()->addSelectedFeatureToFeatureGroup();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Remove feature", ImVec2(120, 50))) {
+		scene.getVoxelData()->removeSelectedFeatureFromFeatureGroup();
+	}
+
 	ImGui::EndGroup();
 	ImGui::BeginGroup();
 	ImGui::Text("Rotate");

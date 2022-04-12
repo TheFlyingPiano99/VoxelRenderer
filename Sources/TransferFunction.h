@@ -95,6 +95,11 @@ struct Feature {
 	}
 };
 
+struct FeatureGroup {
+	std::vector<Feature*> features;
+	std::string name;
+};
+
 class TransferFunction
 {
 	Shader* shader = nullptr;
@@ -195,6 +200,8 @@ public:
 	Feature* nextFeature(Feature* current);
 
 	void showAll();
+
+	void showVisible();
 
 	void saveFeatures(std::ostream& stream) {
 		for (Feature& feature : features) {
