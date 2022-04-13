@@ -502,8 +502,7 @@ void VoxelData::setSelectedFeature(const char* name) {
 	if (selectedFeature != nullptr) {
 		if (transferFunction.setFeatureVisibility(*selectedFeature, true)) {
 			transferFunction.blur(3);
-			boundingGeometry.updateGeometry(*voxelTexture, transferFunction, boundingGeometryTreshold);
-			changed = true;
+			update();
 		};
 	}
 }
@@ -531,10 +530,21 @@ void VoxelData::createFeatureGroup()
 	featureGroups.push_back(group);
 }
 
+void VoxelData::addFeatureToFeatureGroup(Feature* feature) {
+	if (nullptr != feature && nullptr != selectedFeatureGroup) {
+		if (std::find(selectedFeatureGroup->features.begin(), selectedFeatureGroup->features.end(), feature)
+			== selectedFeatureGroup->features.end()) {
+			selectedFeatureGroup->features.push_back(feature);
+		}
+	}
+}
+
+
 void VoxelData::addSelectedFeatureToFeatureGroup() 
 {
 	if (nullptr != selectedFeature && nullptr != selectedFeatureGroup) {
-		if (std::find(selectedFeatureGroup->features.begin(), selectedFeatureGroup->features.end(), selectedFeature) == selectedFeatureGroup->features.end()) {
+		if (std::find(selectedFeatureGroup->features.begin(), selectedFeatureGroup->features.end(), selectedFeature) 
+			== selectedFeatureGroup->features.end()) {
 				selectedFeatureGroup->features.push_back(selectedFeature);
 		}
 	}
@@ -546,6 +556,7 @@ void VoxelData::removeSelectedFeatureFromFeatureGroup()
 		selectedFeatureGroup->features.erase(std::find(selectedFeatureGroup->features.begin(),
 			selectedFeatureGroup->features.end(), 
 			selectedFeature));
+		selectedFeature = nullptr;
 	}
 }
 
@@ -609,7 +620,15 @@ void VoxelData::loadFeatures() {
 		featureGroups.clear();
 		transferFunction.loadFeatures(stream, featureGroups);
 		stream.close();
+		FeatureGroup all;
+		all.name = "All features";
+		for (Feature& feature : transferFunction.getFeatures()) {
+			all.features.push_back(&feature);
+		}
+		all.serialize = false;
+		featureGroups.push_back(all);
 		selectedFeature = nullptr;
+		selectedFeatureGroup = nullptr;
 		update();
 	}
 }

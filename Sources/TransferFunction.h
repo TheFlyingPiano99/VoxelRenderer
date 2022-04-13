@@ -98,9 +98,10 @@ struct Feature {
 struct FeatureGroup {
 	std::vector<Feature*> features;
 	std::string name;
+	bool serialize = true;
 
 	void save(std::ostream& stream) {
-		if (name.compare("") == 0) {
+		if (name.compare("") == 0 || !serialize) {
 			return;
 		}
 		stream << "featureGroup" << std::endl;

@@ -186,6 +186,8 @@ public :
 		return featureGroups;
 	}
 
+	void addFeatureToFeatureGroup(Feature* feature);
+
 	void addSelectedFeatureToFeatureGroup();
 
 	void removeSelectedFeatureFromFeatureGroup();
@@ -199,7 +201,16 @@ public :
 	void setSelectedFeatureGroup(const char* name) {
 		for (FeatureGroup& group : featureGroups) {
 			if (group.name.compare(name) == 0) {
+				if (selectedFeatureGroup != &group) {
+					selectedFeature = nullptr;
+				}
 				selectedFeatureGroup = &group;
+				if (selectedFeatureGroup != &group) {
+					selectedFeature = nullptr;
+					showSelectedFeatureGroup();
+					update();
+				}
+				break;
 			}
 		}
 	}

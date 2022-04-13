@@ -35,6 +35,8 @@ void GUI::preDrawInit()
 
 static bool configFeature = false;
 static bool configSTF = false;
+static bool addFeatureToGroup = false;
+static Feature* featureToAdd = nullptr;
 
 void GUI::configToScene(Scene& scene)
 {
@@ -67,39 +69,12 @@ void GUI::configToScene(Scene& scene)
 		ImGui::EndCombo();
 	}
 
-	current_item = (scene.getVoxelData()->getSelectedFeature() != nullptr) ?
-		scene.getVoxelData()->getSelectedFeature()->name.c_str() : "Select feature";
-	std::vector<Feature>& features = scene.getVoxelData()->getTransferFunction()->getFeatures();
-
-	if (ImGui::BeginCombo("Feature", current_item)) // The second parameter is the label previewed before opening the combo.
-	{
-		for (int n = 0; 
-			n < scene.getVoxelData()
-			->getTransferFunction()
-			->getFeatures().size();
-			n++)
-		{
-			bool is_selected = (current_item == features[n].name.c_str()); // You can store your selection however you want, outside or inside your objects
-			if (ImGui::Selectable(features[n].name.c_str(), is_selected)) {
-				current_item = features[n].name.c_str();
-				scene.getVoxelData()->setSelectedFeature(current_item);
-			}
-			if (is_selected) {
-				ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
-			}
-		}
-		ImGui::EndCombo();
-	}
-
 	current_item = (scene.getVoxelData()->getSelectedFeatureGroup() != nullptr) ?
 		scene.getVoxelData()->getSelectedFeatureGroup()->name.c_str() : "Select group";
 	std::vector<FeatureGroup>& groups = scene.getVoxelData()->getFeatureGroups();
 	if (ImGui::BeginCombo("Feature group", current_item)) // The second parameter is the label previewed before opening the combo.
 	{
-		for (int n = 0;
-			n < scene.getVoxelData()
-			->getFeatureGroups().size();
-			n++)
+		for (int n = 0; n < groups.size(); n++)
 		{
 			bool is_selected = (current_item == groups[n].name.c_str()); // You can store your selection however you want, outside or inside your objects
 			if (ImGui::Selectable(groups[n].name.c_str(), is_selected)) {
@@ -111,6 +86,28 @@ void GUI::configToScene(Scene& scene)
 			}
 		}
 		ImGui::EndCombo();
+	}
+	
+	if (scene.getVoxelData()->getSelectedFeatureGroup() != nullptr) {
+		current_item = (scene.getVoxelData()->getSelectedFeature() != nullptr) ?
+			scene.getVoxelData()->getSelectedFeature()->name.c_str() : "Select feature";
+		std::vector<Feature*>& features = scene.getVoxelData()->getSelectedFeatureGroup()->features;
+
+		if (ImGui::BeginCombo("Feature", current_item)) // The second parameter is the label previewed before opening the combo.
+		{
+			for (int n = 0; n < features.size(); n++)
+			{
+				bool is_selected = (current_item == features[n]->name.c_str()); // You can store your selection however you want, outside or inside your objects
+				if (ImGui::Selectable(features[n]->name.c_str(), is_selected)) {
+					current_item = features[n]->name.c_str();
+					scene.getVoxelData()->setSelectedFeature(current_item);
+				}
+				if (is_selected) {
+					ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+				}
+			}
+			ImGui::EndCombo();
+		}
 	}
 
 	ImGui::BeginGroup();
@@ -141,7 +138,7 @@ void GUI::configToScene(Scene& scene)
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Add feature", ImVec2(120, 50))) {
-		scene.getVoxelData()->addSelectedFeatureToFeatureGroup();
+		addFeatureToGroup = true;
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Remove feature", ImVec2(120, 50))) {
@@ -192,6 +189,48 @@ void GUI::configToScene(Scene& scene)
 		ImGui::SameLine();
 		if (ImGui::Button("Cancel", ImVec2())) {
 			configSTF = false;
+		}
+	}
+
+	if (addFeatureToGroup) {
+		FeatureGroup* group = scene.getVoxelData()->getSelectedFeatureGroup();
+		if (group != nullptr && group->name.compare("All features") != 0) {
+			ImGui::Begin(std::string("Add feature to ").append(group->name).c_str());
+			current_item = (featureToAdd != nullptr) ?
+				featureToAdd->name.c_str() : "Select feature";
+			std::vector<Feature>& features = scene.getVoxelData()->getTransferFunction()->getFeatures();
+			if (ImGui::BeginCombo("Feature to add", current_item)) // The second parameter is the label previewed before opening the combo.
+			{
+				for (int n = 0; n < features.size(); n++)
+				{
+					bool is_selected = (current_item == features[n].name.c_str()); // You can store your selection however you want, outside or inside your objects
+					if (ImGui::Selectable(features[n].name.c_str(), is_selected)) {
+						current_item = features[n].name.c_str();
+						featureToAdd = &features[n];
+					}
+					if (is_selected) {
+						ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+					}
+				}
+				ImGui::EndCombo();
+			}
+			if (ImGui::Button("Add", ImVec2())) {
+				if (featureToAdd != nullptr) {
+					scene.getVoxelData()->addFeatureToFeatureGroup(featureToAdd);
+					featureToAdd = nullptr;
+					addFeatureToGroup = false;
+				}
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel", ImVec2())) {
+				featureToAdd = nullptr;
+				addFeatureToGroup = false;
+			}
+			ImGui::End();
+		}
+		else {
+			featureToAdd = nullptr;
+			addFeatureToGroup = false;
 		}
 	}
 }
