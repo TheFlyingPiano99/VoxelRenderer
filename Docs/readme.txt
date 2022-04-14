@@ -1,1 +1,1 @@
-Temp
+This is a volume visualization application implemented in C++ using OpenGL. It is capable of automatically distinguishing between different features of the volume data. It uses half-angle slicing for rendering translucent materials.
