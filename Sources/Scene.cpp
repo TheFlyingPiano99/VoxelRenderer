@@ -108,9 +108,9 @@ void Scene::initBasePlate()
 	);
 	shaders.push_back(defaultIncrementalShader);
 
-	std::vector<Vertex> infinitePlaneVertices;
-	std::vector<GLuint> infinitePlaneIndices;
-	std::vector<Texture2D*> infinitePlaneTextures;
+	std::vector<Vertex> vertices;
+	std::vector<GLuint> indices;
+	std::vector<Texture2D*> textures;
 
 	glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
 	Vertex v1;
@@ -137,32 +137,32 @@ void Scene::initBasePlate()
 	v4.position = glm::vec4(-1.0f, 0.0f, 1.0f, 1.0f);
 	v4.texUV = glm::vec2(0.0f, 0.0f);
 
-	infinitePlaneVertices.push_back(v1);
-	infinitePlaneVertices.push_back(v2);
-	infinitePlaneVertices.push_back(v3);
-	infinitePlaneVertices.push_back(v4);
-	infinitePlaneIndices.push_back(2);
-	infinitePlaneIndices.push_back(1);
-	infinitePlaneIndices.push_back(0);
+	vertices.push_back(v1);
+	vertices.push_back(v2);
+	vertices.push_back(v3);
+	vertices.push_back(v4);
+	indices.push_back(2);
+	indices.push_back(1);
+	indices.push_back(0);
 
-	infinitePlaneIndices.push_back(3);
-	infinitePlaneIndices.push_back(2);
-	infinitePlaneIndices.push_back(0);
+	indices.push_back(3);
+	indices.push_back(2);
+	indices.push_back(0);
 
 	Texture2D* colorTexture = new Texture2D(AssetManager::getInstance()->getTextureFolderPath().append("planks.png").c_str(), "diffuse", 0, GL_RGBA, GL_UNSIGNED_BYTE);
 	Texture2D* specularTexture = new Texture2D(AssetManager::getInstance()->getTextureFolderPath().append("planksSpec.png").c_str(), "specular", 1, GL_RED, GL_UNSIGNED_BYTE);
 	colorSpecularTextures.push_back(colorTexture);
-	infinitePlaneTextures.push_back(colorTexture);
+	textures.push_back(colorTexture);
 	colorSpecularTextures.push_back(specularTexture);
-	infinitePlaneTextures.push_back(specularTexture);
+	textures.push_back(specularTexture);
 
-	SceneObject* plane = new SceneObject(new Mesh(infinitePlaneVertices, infinitePlaneIndices, infinitePlaneTextures),
+	SceneObject* plane = new SceneObject(new Mesh(vertices, indices, textures),
 		defaultIncrementalShader);
 	plane->setScale(glm::vec3(300, 1, 300));
 	sceneObjects.push_back(plane);
 
 
-	plane = new SceneObject(new Mesh(infinitePlaneVertices, infinitePlaneIndices, infinitePlaneTextures),
+	plane = new SceneObject(new Mesh(vertices, indices, textures),
 		defaultIncrementalShader);
 	plane->setScale(glm::vec3(300, 1, 300));
 	plane->setEulerAngles(glm::vec3(3.14159265359f, 0.0f, 0.0f));
@@ -204,7 +204,7 @@ void Scene::initMeshesShadersObjects()
 		AssetManager::getInstance()->getShaderFolderPath().append("voxel.frag").c_str()
 	);
 	Shader* voxelHalfAngleShader = new Shader(
-		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("BoundingBox.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("voxelHalfAngle.frag").c_str()
 	);
 	Shader* quadShader = new Shader(
@@ -213,7 +213,7 @@ void Scene::initMeshesShadersObjects()
 	);
 	Shader* quadDepthShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
-		AssetManager::getInstance()->getShaderFolderPath().append("quad-depth.frag").c_str()
+		AssetManager::getInstance()->getShaderFolderPath().append("quad.frag").c_str()
 	);
 	Shader* boundingShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("bounding.vert").c_str(),

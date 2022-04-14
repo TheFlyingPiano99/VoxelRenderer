@@ -4,9 +4,11 @@
 	Half angle method
 */
 
+in vec3 modelPos;
+in vec2 quadTexCoords;
+
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec4 FragOpacity;
-in vec2 texCoords;
 
 layout (binding = 0) uniform sampler3D voxels;
 layout (binding = 1) uniform sampler2D colorAttenuationTransfer;
@@ -25,15 +27,18 @@ layout (binding = 12) uniform sampler2D lightExitTexture5;
 layout (binding = 13) uniform sampler2D lightExitTexture6;
 
 uniform vec3 resolution;
-uniform mat4 modelMatrix;
-uniform mat4 invModelMatrix;
+
+struct SceneObject {
+	mat4 modelMatrix;
+	mat4 invModelMatrix;
+};
+uniform SceneObject sceneObject;
 
 uniform float shininess;
 uniform vec3 specularColor;
 uniform vec3 ambientColor;
 
-uniform vec3 slicePosition;
-uniform vec3 halfway;
+uniform vec3 modelSliceNormal;
 uniform float delta;
 
 struct Plane {
@@ -147,54 +152,46 @@ vec3 BlurLight(vec2 texCoord, float offset, vec4 directLightAttenuation) {
 	return sum.rgb;
 }
 
-vec4 calculateColor(vec3 enter, vec3 exit) {
-	
-	vec3 position = intersectPlane(enter, normalize(exit - enter), slicePosition, halfway);
-	
-	//	Calculating depth
-	vec4 camSpace = camera.viewProjMatrix * modelMatrix * vec4(position, 1);
-	camSpace = camSpace / camSpace.w;
-	float depth = 0.5 * (camSpace.z + 1);
-	float targetDepth = texture(targetDepthTexture, texCoords).x;
-
-	vec4 lightModelSpacePos = invModelMatrix * lights[0].position;
-	float lightDistance;
-	vec3 lightDiff;
-	if (lightModelSpacePos.w == 0.0) {
-		lightDiff = lightModelSpacePos.xyz - position * lights[0].position.w;
-		lightDistance = 1.0;
-	}
-	else {
-		lightModelSpacePos /= lightModelSpacePos.w;
-		lightDiff = lightModelSpacePos.xyz - position * lights[0].position.w;
-		lightDistance = length(lightDiff);
-	}
-
-	vec3 lightDir = normalize(lightDiff);
-	vec3 opacitySampleModelSpacePos = intersectPlane(position, lightDir, position + delta * halfway, halfway);
-	vec4 opacitySampleCamSpacePos = camera.viewProjMatrix * modelMatrix * vec4(opacitySampleModelSpacePos, 1.0);
-	opacitySampleCamSpacePos /= opacitySampleCamSpacePos.w;
-	vec2 lightTexCoord = opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5);
-	vec4 dstLightAttenuation = texture(opacityTexture, lightTexCoord);	// rgb = indirect attenuation | a = direct attenuation
+vec4 calculateColor(vec3 enter, vec3 exit) {	
 
 	vec4 srcLightAttenuation = vec4(0.0);
 	vec4 color = vec4(0.0);
 	vec4 colorAttenuation = vec4(0.0);	// xyz = Color | w = attenuation
-	vec4 modelSpacePlanePos = invModelMatrix * vec4(slicingPlane.position, 1);
+	/*
+	vec4 modelSpacePlanePos = sceneObject.invModelMatrix * vec4(slicingPlane.position, 1);
 	modelSpacePlanePos /= modelSpacePlanePos.w;
-	vec4 slicingPlaneModelNormal = vec4(slicingPlane.normal, 0) * modelMatrix;
+	vec4 slicingPlaneModelNormal = vec4(slicingPlane.normal, 0) * sceneObject.modelMatrix;
+	*/
 	if (length(exit - enter) > 0.00000001
-		&& dot(normalize(position - modelSpacePlanePos.xyz), slicingPlaneModelNormal.xyz) < 0.0
-		&& dot(normalize(position - enter), normalize(exit - enter)) > 0.0 //Use this until no tesselletad slices
-		&& dot(normalize(position - exit), normalize(enter - exit)) > 0.0 // Use this until no tesselletad slices
-		&& depth < targetDepth) {
-		vec3 offset = 0.5 * vec3(noise(position.xy), noise(position.yz), noise(position.zx));
-		vec4 gradientIntesity = resampleGradientAndDensity(position + offset, trilinearInterpolation(position + offset));	// xyz = gradient | w = intensity
+		//&& dot(normalize(modelPos - modelSpacePlanePos.xyz), slicingPlaneModelNormal.xyz) < 0.0
+		&& dot(normalize(modelPos - enter), normalize(exit - enter)) > 0.0 //Use this until no tesselletad slices
+		&& dot(normalize(modelPos - exit), normalize(enter - exit)) > 0.0 // Use this until no tesselletad slices
+	) {
+		vec4 lightModelSpacePos = sceneObject.invModelMatrix * lights[0].position;
+		float lightDistance;
+		vec3 lightDiff;
+		if (lightModelSpacePos.w == 0.0) {
+			lightDiff = lightModelSpacePos.xyz - modelPos * lights[0].position.w;
+			lightDistance = 1.0;
+		}
+		else {
+			lightModelSpacePos /= lightModelSpacePos.w;
+			lightDiff = lightModelSpacePos.xyz - modelPos * lights[0].position.w;
+			lightDistance = length(lightDiff);
+		}
+		vec3 lightDir = normalize(lightDiff);
+		vec3 opacitySampleModelSpacePos = intersectPlane(modelPos, lightDir, modelPos + delta * modelSliceNormal, modelSliceNormal);
+		vec4 opacitySampleCamSpacePos = camera.viewProjMatrix * sceneObject.modelMatrix * vec4(opacitySampleModelSpacePos, 1.0);
+		opacitySampleCamSpacePos /= opacitySampleCamSpacePos.w;
+		vec2 lightTexCoord = opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5);
+		vec4 dstLightAttenuation = texture(opacityTexture, lightTexCoord);	// rgb = indirect attenuation | a = direct attenuation
+		vec3 offset = 0.5 * vec3(noise(modelPos.xy), noise(modelPos.yz), noise(modelPos.zx));
+		vec4 gradientIntesity = resampleGradientAndDensity(modelPos + offset, trilinearInterpolation(modelPos + offset));	// xyz = gradient | w = intensity
 		colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));	// xyz = Color | w = attenuation
 		vec3 viewDir = normalize(enter - exit);
-		float cosHalfway = dot(viewDir, halfway);
+		float cosHalfway = dot(viewDir, modelSliceNormal);
 		if (cosHalfway < 0.0) {
-			cosHalfway = dot(-viewDir, halfway);
+			cosHalfway = dot(-viewDir, modelSliceNormal);
 		}
 		if (cosHalfway == 0.0) {
 			cosHalfway = 1.0;
@@ -207,14 +204,14 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 		color.rgb = lightIntensity * (max(1 - dstLightAttenuation.a, 0) + max(1 - bluredLightAttenuation.rgb, vec3(0))) * Cl * delta / cosHalfway;	// L * (alpha + alpha_i) * C_l
 		color.a = max(colorAttenuation.a * delta / cosHalfway, 0.0);
 		srcLightAttenuation = max(vec4(colorAttenuation.a * normalize(1 - colorAttenuation.rgb), colorAttenuation.a) * delta / cosHalfway, vec4(0.0));	// Calculate indirect (rgb) and direct (a) light attenuation
-		gl_FragDepth = depth;
+		FragOpacity = srcLightAttenuation + dstLightAttenuation * (1 - srcLightAttenuation);	// Over operator
 	}
-	FragOpacity = srcLightAttenuation + dstLightAttenuation * (1 - srcLightAttenuation);	// Over operator
 	return color;
 }
 
 void main() {
-	vec3 enter = texture(enterTexture, texCoords).xyz;
-	vec3 exit = texture(exitTexture, texCoords).xyz;
+	vec3 enter = texture(enterTexture, quadTexCoords).xyz;
+	vec3 exit = texture(exitTexture, quadTexCoords).xyz;
 	FragColor = calculateColor(enter, exit);
+	//FragColor = vec4(modelPos / resolution, 1);
 }

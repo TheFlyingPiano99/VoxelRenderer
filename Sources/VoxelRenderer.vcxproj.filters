@@ -346,5 +346,8 @@
     <None Include="..\Resources\Shaders\voxelHalfAngle.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
+    <None Include="..\Resources\Shaders\boundingBox.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

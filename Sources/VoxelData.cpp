@@ -15,8 +15,8 @@ void VoxelData::exportData(Shader* shader)
 	glUniform1f(glGetUniformLocation(shader->ID, "shininess"), shininess);
 	glUniform3f(glGetUniformLocation(shader->ID, "specularColor"), specularColor.r, specularColor.g, specularColor.b);
 	glUniform3f(glGetUniformLocation(shader->ID, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
-	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
-	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "sceneObject.modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "sceneObject.invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
 	glUniform1ui(glGetUniformLocation(shader->ID, "shadowSamples"), shadowSamples);
 	slicingPlane.exportData(shader, "slicingPlane");
 }
@@ -148,14 +148,13 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngle, Shader* quad
 	featureGroups.clear();
 	// Stores the width, height, and the number of color channels of the image
 	Dimensions dimensions;
-	if (readDimensions(std::string(directory).append("dimensions.txt").c_str(), name, dimensions)) {
-		voxelTexture = new Texture3D(directory, dimensions, 0, GL_RED);
-		scale = glm::vec3(dimensions.widthScale, dimensions.heightScale, dimensions.depthScale);
-	}
-	else {
+	if (!readDimensions(std::string(directory).append("dimensions.txt").c_str(), name, dimensions)) {
 		throw new std::exception("Failed to read dimensions of voxel data!");
 	}
-	
+	voxelTexture = new Texture3D(directory, dimensions, 0, GL_RED);
+	scale = glm::vec3(dimensions.widthScale, dimensions.heightScale, dimensions.depthScale);
+	initBoundingBox(dimensions, boundingBox);
+
 	// Transfer function:
 	transferFunction.setCamSpacePosition(glm::vec2(0.0f, -0.8f));
 
@@ -283,11 +282,8 @@ void VoxelData::drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& l
 
 void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount)
 {
-	unsigned int source = currentStep % 2;
-	unsigned int target = (currentStep + 1) % 2;
 	float assumedDiameter = glm::length(scale * glm::vec3(voxelTexture->dimensions.width, voxelTexture->dimensions.height, voxelTexture->dimensions.depth));
 	float delta = assumedDiameter / stepCount;
-	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[target], 0);
 
 	glm::vec3 viewDir = glm::normalize(camera.eye - position);
 	glm::vec3 lightDir = glm::normalize(glm::vec3(light.position.x, light.position.y, light.position.z) - position);
@@ -299,11 +295,11 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 		halfway = glm::normalize(viewDir + lightDir);
 	}
 	delta *= abs(glm::dot(halfway, viewDir));
-	glm::vec3 slicePosition = position - halfway * abs(glm::dot(halfway, viewDir)) * assumedDiameter * (currentStep / (float)stepCount - 0.5f);
 	quadFBO.Bind();
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_ALWAYS);
+	glDepthFunc(GL_LESS);
+	glDepthMask(GL_FALSE);
 	glEnable(GL_BLEND);
 	if (glm::dot(viewDir, lightDir) < 0.0) {
 		glBlendFunci(0, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);	// Back to front
@@ -313,18 +309,13 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	}
 	glBlendFunci(1, GL_ONE, GL_ZERO);
 
+	quadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, targetDepthTeture, 0);
 	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
-	quadVAO->Bind();
 	voxelHalfAngleShader->Activate();
 	this->exportData(voxelHalfAngleShader);
 	camera.exportData(*voxelHalfAngleShader);
 	light.exportData(*voxelHalfAngleShader, 0);
 
-	glm::vec4 slicePositionModelSpace = invModelMatrix * glm::vec4(slicePosition.x, slicePosition.y, slicePosition.z, 1.0);
-	slicePositionModelSpace = slicePositionModelSpace / slicePositionModelSpace.w;
-	glm::vec4 halfwayModelSpace = invModelMatrix * glm::vec4(halfway.x, halfway.y, halfway.z, 0.0);
-	glUniform3f(glGetUniformLocation(voxelHalfAngleShader->ID, "slicePosition"), slicePositionModelSpace.x, slicePositionModelSpace.y, slicePositionModelSpace.z);
-	glUniform3f(glGetUniformLocation(voxelHalfAngleShader->ID, "halfway"), halfwayModelSpace.x, halfwayModelSpace.y, halfwayModelSpace.z);
 	glUniform1f(glGetUniformLocation(voxelHalfAngleShader->ID, "delta"), delta);
 
 	glActiveTexture(GL_TEXTURE0 + 5);
@@ -335,14 +326,29 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	enterTexture->Bind();
 	exitTexture->Bind();
 	targetDepthTeture.Bind();
-	opacityTextures[source]->Bind();
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glm::vec4 modelSliceNormal = glm::vec4(halfway.x, halfway.y, halfway.z, 0.0) * modelMatrix;
+	glUniform3f(glGetUniformLocation(voxelHalfAngleShader->ID, "modelSliceNormal"), modelSliceNormal.x, modelSliceNormal.y, modelSliceNormal.z);
+
+	unsigned int source;
+	unsigned int target;
+	{		// Loop here
+		source = currentStep % 2;
+		target = (currentStep + 1) % 2;
+		glm::vec3 slicePosition = position - halfway * abs(glm::dot(halfway, viewDir)) * assumedDiameter * (currentStep / (float)stepCount - 0.5f);
+		glm::vec4 modelSlicePosition = invModelMatrix * glm::vec4(slicePosition.x, slicePosition.y, slicePosition.z, 1.0);
+		modelSlicePosition = modelSlicePosition / modelSlicePosition.w;
+		quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[target], 0);
+		opacityTextures[source]->Bind();
+		drawProxyGeometry(camera, modelSlicePosition, modelSliceNormal);
+	}
 
 	voxelTexture->Unbind();
 	transferFunction.Unbind();
 	enterTexture->Unbind();
 	exitTexture->Unbind();
 	opacityTextures[source]->Unbind();
+	glDepthMask(GL_TRUE);
 }
 
 void VoxelData::drawQuad(Texture2D& targetDepthTexture) {
@@ -633,4 +639,121 @@ void VoxelData::loadFeatures() {
 	}
 }
 
+void VoxelData::drawProxyGeometry(const Camera& camera, const glm::vec3& modelSlicePosition, const glm::vec3& modelSliceNormal) {
+
+	glm::vec3 modelIntersection;
+	std::vector<glm::vec3> vertices;
+	vertices.clear();
+	for (int i = 0; i < 12; i++) {
+		if (intersectPlane(boundingBox.edges[i], modelSlicePosition, modelSliceNormal, modelIntersection)) {
+			vertices.push_back(modelIntersection);
+		}
+	}
+	if (vertices.size() >= 3) {
+		std::vector<GLuint> indices;
+		indices.clear();
+		
+		
+		if (vertices.size() == 3) {	// Single triangle
+			indices.push_back(0);
+			indices.push_back(1);
+			indices.push_back(2);
+		}
+		else {	// Triangle fan
+			glm::vec3 center = glm::vec3(0.0);
+			for (int i = 0; i < vertices.size(); i++) {
+				center += vertices[i];
+			}
+			center /= (float)vertices.size();
+			glm::vec4 cameraCenter = camera.viewProjMatrix * modelMatrix * glm::vec4(center.x, center.y, center.z, 1.0f);
+			cameraCenter /= cameraCenter.w;
+			std::vector<glm::vec3> orderedVertices;
+			const glm::mat4& modelMatrix = this->modelMatrix;
+			auto compareAngle = [camera, center, modelMatrix, cameraCenter](glm::vec3& vertex1 , glm::vec3& vertex2)-> float {
+				glm::vec4 cameraVertex = camera.viewProjMatrix * modelMatrix * glm::vec4(vertex1.x, vertex1.y, vertex1.z, 1.0f);
+				cameraVertex /= cameraVertex.w;
+				glm::vec2 dir1 = glm::normalize(glm::vec2(cameraVertex.x, cameraVertex.y) - glm::vec2(cameraCenter.x, cameraCenter.y));
+				
+				cameraVertex = camera.viewProjMatrix * modelMatrix * glm::vec4(vertex2.x, vertex2.y, vertex2.z, 1.0f);
+				cameraVertex /= cameraVertex.w;
+				glm::vec2 dir2 = glm::normalize(glm::vec2(cameraVertex.x, cameraVertex.y) - glm::vec2(cameraCenter.x, cameraCenter.y));
+				return atan2f(dir1.x, dir1.y) > atan2f(dir2.x, dir2.y);
+			};
+			std::sort(vertices.begin(), vertices.end(), compareAngle);
+			
+			for (int i = 0; i < vertices.size() - 2; i++) {
+				indices.push_back(0);
+				indices.push_back(i + 1);
+				indices.push_back(i + 2);
+			}
+		}
+		
+		VAO VAO;
+		VAO.Bind();
+		VBO VBO(vertices);
+		EBO EBO(indices);
+		VAO.LinkAttrib(VBO, 0, 3, GL_FLOAT, sizeof(glm::vec3), (void*)0);
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+		VBO.Delete();
+		EBO.Delete();
+		VAO.Delete();
+		VAO.Unbind();
+		VAO.Delete();
+	}
+}
+
+void VoxelData::initBoundingBox(Dimensions& dim, BoundingBox& box) {
+	glm::vec3 resolution = glm::vec3(dim.width, dim.height, dim.depth);
+	
+	// Base quad:
+	box.edges[0].position = glm::vec3(0,0,0) * resolution;
+	box.edges[0].direction = glm::vec3(1,0,0);
+	box.edges[0].length = resolution.x;
+
+	box.edges[1].position = glm::vec3(1,0,0) * resolution;
+	box.edges[1].direction = glm::vec3(0, 0, 1);
+	box.edges[1].length = resolution.z;
+
+	box.edges[2].position = glm::vec3(1, 0, 1) * resolution;
+	box.edges[2].direction = glm::vec3(-1, 0, 0);
+	box.edges[2].length = resolution.x;
+
+	box.edges[3].position = glm::vec3(0, 0, 1) * resolution;
+	box.edges[3].direction = glm::vec3(0, 0, -1);
+	box.edges[3].length = resolution.z;
+
+	// Vertical edges:
+	box.edges[4].position = glm::vec3(0) * resolution;
+	box.edges[4].direction = glm::vec3(0, 1, 0);
+	box.edges[4].length = resolution.y;
+
+	box.edges[5].position = glm::vec3(1, 0, 0) * resolution;
+	box.edges[5].direction = glm::vec3(0, 1, 0);
+	box.edges[5].length = resolution.y;
+
+	box.edges[6].position = glm::vec3(1, 0, 1) * resolution;
+	box.edges[6].direction = glm::vec3(0, 1, 0);
+	box.edges[6].length = resolution.y;
+
+	box.edges[7].position = glm::vec3(0, 0, 1) * resolution;
+	box.edges[7].direction = glm::vec3(0, 1, 0);
+	box.edges[7].length = resolution.y;
+
+	// Top quad:
+	box.edges[8].position = glm::vec3(0, 1, 0) * resolution;
+	box.edges[8].direction = glm::vec3(1, 0, 0);
+	box.edges[8].length = resolution.x;
+
+	box.edges[9].position = glm::vec3(1, 1, 0) * resolution;
+	box.edges[9].direction = glm::vec3(0, 0, 1);
+	box.edges[9].length = resolution.z;
+
+	box.edges[10].position = glm::vec3(1, 1, 1) * resolution;
+	box.edges[10].direction = glm::vec3(-1, 0, 0);
+	box.edges[10].length = resolution.x;
+
+	box.edges[11].position = glm::vec3(0, 1, 1) * resolution;
+	box.edges[11].direction = glm::vec3(0, 0, -1);
+	box.edges[11].length = resolution.z;
+}
 

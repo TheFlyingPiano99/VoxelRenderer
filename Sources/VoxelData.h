@@ -15,6 +15,16 @@
 
 #define TRANSFER_MODE_COUNT 4
 
+struct BoxEdge {
+	glm::vec3 position;
+	glm::vec3 direction;
+	float length;
+};
+
+struct BoundingBox {
+	BoxEdge edges[12];
+};
+
 class VoxelData
 {
 	Shader* voxelShader = nullptr;	// Don't delete!
@@ -34,6 +44,7 @@ class VoxelData
 
 	FBO quadFBO;
 
+	BoundingBox boundingBox;
 	BoundingGeometry boundingGeometry;
 	TransferFunction transferFunction;
 	Feature* selectedFeature = nullptr;
@@ -78,6 +89,19 @@ class VoxelData
 	void initFBOs(unsigned int contextWidth, unsigned int contextHeight);
 
 	void updateMatrices();
+
+	void drawProxyGeometry(const Camera& camera, const glm::vec3& modelSlicePosition, const glm::vec3& modelSliceNormal);
+
+	void initBoundingBox(Dimensions& dim, BoundingBox& box);
+
+	bool intersectPlane(const BoxEdge& edge, const glm::vec3& planePos, const glm::vec3& planeNormal, glm::vec3& intersection) {
+		float t = dot(planePos - edge.position, planeNormal) / dot(edge.direction, planeNormal);
+		if (t >= 0 && t < edge.length) {
+			intersection = edge.position + edge.direction * t;
+			return true;
+		}
+		return false;
+	}
 
 public :
 	VoxelData(Shader* _shader, Shader* _voxelHalfAngle, Shader* quadShader, Shader* boundingShader, Shader* _flatColorBoundingShader, Shader* transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight);
