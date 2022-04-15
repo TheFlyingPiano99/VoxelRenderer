@@ -112,9 +112,9 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 
 	// Quad:
 	quadTexture = new Texture2D(GL_RGBA, glm::vec2(contextWidth, contextHeight), 0, GL_RGBA, GL_FLOAT);
-	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *quadTexture, 0);
+	voxelQuadFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *quadTexture, 0);
 	quadDepthTexture = new Texture2D(GL_DEPTH_COMPONENT, glm::vec2(contextWidth, contextHeight), 1, GL_DEPTH_COMPONENT, GL_FLOAT);
-	quadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, *quadDepthTexture, 0);
+	voxelQuadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, *quadDepthTexture, 0);
 }
 
 VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngle, Shader* quadShader, Shader* _boundingShader, Shader* _flatColorBoundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
@@ -211,29 +211,32 @@ void VoxelData::drawBoundingGeometry(Camera& camera, std::vector<Light>& lights)
 
 void VoxelData::resetOpacity(Light& light)
 {
-	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[0], 0);
+	voxelQuadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[0], 0);
+	glClearDepth(1.0f);
 	glClearColor(1 - light.powerDensity.r, 1 - light.powerDensity.g, 1 - light.powerDensity.b, 0);
-	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT1 });
-	glClear(GL_COLOR_BUFFER_BIT);
+	voxelQuadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT1 });
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[1], 0);
-	glClearColor(0, 0, 0, 1);
-	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT1 });
-	glClear(GL_COLOR_BUFFER_BIT);
+	voxelQuadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[1], 0);
+	glClearDepth(1.0f);
+	glClearColor(0, 0, 0, 0);
+	voxelQuadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT1 });
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glClearDepth(1.0f);
 	glClearColor(0, 0, 0, 0);
-	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0 });
+	voxelQuadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0 });
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	voxelQuadFBO.Unbind();
 }
 
-void VoxelData::drawBoundingGeometryOnScreen(Camera& camera, float opacity)
+void VoxelData::drawBoundingGeometryOnScreen(FBO& fbo, Camera& camera, float opacity)
 {
-	boundingGeometry.drawOnScreen(camera, modelMatrix, invModelMatrix, opacity);
+	boundingGeometry.drawOnScreen(fbo, camera, modelMatrix, invModelMatrix, opacity);
 }
 
-void VoxelData::drawTransferFunction() {
-	transferFunction.draw();
+void VoxelData::drawTransferFunction(FBO& fbo) {
+	transferFunction.draw(fbo);
 }
 
 
@@ -242,9 +245,9 @@ void VoxelData::drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& l
 	unsigned int source = currentStep % 2;
 	unsigned int target = (currentStep + 1) % 2;
 	float depth = (currentStep + 1.0f) / (float)stepCount;
-	quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[target], 0);
+	voxelQuadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[target], 0);
 
-	quadFBO.Bind();
+	voxelQuadFBO.Bind();
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_ALWAYS);
@@ -252,7 +255,7 @@ void VoxelData::drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& l
 	glBlendFunci(0, GL_ONE, GL_ONE);
 	glBlendFunci(1, GL_ONE, GL_ZERO);
 	
-	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
+	voxelQuadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
 	quadVAO->Bind();
 	voxelShader->Activate();
 	this->exportData(voxelShader);
@@ -295,7 +298,7 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 		halfway = glm::normalize(viewDir + lightDir);
 	}
 	delta *= abs(glm::dot(halfway, viewDir));
-	quadFBO.Bind();
+	voxelQuadFBO.Bind();
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -309,8 +312,8 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	}
 	glBlendFunci(1, GL_ONE, GL_ZERO);
 
-	quadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, targetDepthTeture, 0);
-	quadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
+	voxelQuadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, targetDepthTeture, 0);
+	voxelQuadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
 	voxelHalfAngleShader->Activate();
 	this->exportData(voxelHalfAngleShader);
 	camera.exportData(*voxelHalfAngleShader);
@@ -325,7 +328,6 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	transferFunction.Bind();
 	enterTexture->Bind();
 	exitTexture->Bind();
-	targetDepthTeture.Bind();
 
 	glm::vec4 modelSliceNormal = glm::vec4(halfway.x, halfway.y, halfway.z, 0.0) * modelMatrix;
 	glUniform3f(glGetUniformLocation(voxelHalfAngleShader->ID, "modelSliceNormal"), modelSliceNormal.x, modelSliceNormal.y, modelSliceNormal.z);
@@ -338,7 +340,7 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 		glm::vec3 slicePosition = position - halfway * abs(glm::dot(halfway, viewDir)) * assumedDiameter * (currentStep / (float)stepCount - 0.5f);
 		glm::vec4 modelSlicePosition = invModelMatrix * glm::vec4(slicePosition.x, slicePosition.y, slicePosition.z, 1.0);
 		modelSlicePosition = modelSlicePosition / modelSlicePosition.w;
-		quadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[target], 0);
+		voxelQuadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[target], 0);
 		opacityTextures[source]->Bind();
 		drawProxyGeometry(camera, modelSlicePosition, modelSliceNormal);
 	}
@@ -349,20 +351,21 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	exitTexture->Unbind();
 	opacityTextures[source]->Unbind();
 	glDepthMask(GL_TRUE);
+	voxelQuadFBO.Unbind();
 }
 
-void VoxelData::drawQuad(Texture2D& targetDepthTexture) {
+void VoxelData::drawQuad(FBO& fbo) {
+	fbo.Bind();
 	quadShader->Activate();
 	quadVAO->Bind();
 	quadTexture->Bind();
-	quadDepthTexture->Bind();
-	targetDepthTexture.Bind();
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_ALWAYS);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
+	fbo.Unbind();
 }
 
 

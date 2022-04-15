@@ -221,14 +221,13 @@ void TransferFunction::grayscale()
 	texture = new Texture2D(bytes, dim, 1, GL_RGBA, GL_FLOAT);
 }
 
-void TransferFunction::draw()
+void TransferFunction::draw(FBO& fbo)
 {
-	if (shader != nullptr) {
-		shader->Activate();
-	}
-	else {
+	if (shader == nullptr) {
 		return;
 	}
+	shader->Activate();
+	fbo.Bind();
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
@@ -239,7 +238,7 @@ void TransferFunction::draw()
 	glUniform1f(glGetUniformLocation(shader->ID, "gamma"), displayGamma);
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-
+	fbo.Unbind();
 }
 
 void TransferFunction::Bind()

@@ -6,6 +6,7 @@
 #include "Light.h"
 #include "Animation.h"
 #include "ISceneObject.h"
+#include "FBO.h"
 
 /*
 * Abstract parent of all displayable objects
@@ -43,7 +44,7 @@ public:
 
 	virtual void animate(float dt);
 
-	virtual void draw(Camera& camera, std::vector<Light>& lights);
+	virtual void draw(FBO& fbo, Camera& camera, std::vector<Light>& lights);
 
 	void setMesh(Mesh* _mesh) {
 		mesh = _mesh;

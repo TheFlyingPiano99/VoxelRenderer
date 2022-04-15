@@ -2,6 +2,7 @@
 #include "Camera.h"
 #include "VAO.h"
 #include "TextureCube.h"
+#include "FBO.h"
 
 
 
@@ -69,7 +70,7 @@ public:
         vbo.Unbind();
     }
 
-    void draw(Camera& camera);
+    void draw(FBO& fbo, Camera& camera);
 
     TextureCube& getTexture() {
         return texture;

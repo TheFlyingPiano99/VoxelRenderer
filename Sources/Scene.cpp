@@ -376,32 +376,31 @@ void Scene::draw()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glStencilMask(0x00);
 
-
-	skybox->draw(*camera);
-	for (auto obj : sceneObjects) {
-		obj->update();
-		obj->draw(*camera, lights);
-	}
 	if (cameraMoved || voxels->popChanged()) {
-		partToDraw = 0;
+		sliceToDraw = 0;
 		voxels->drawBoundingGeometry(*camera, lights);
 		voxels->resetOpacity(lights[0]);
 	}
-	if (partToDraw >= 0) {
-		voxels->drawHalfAngleLayer(*camera, *quadDepthTexture, lights[0], *skybox, partToDraw, noOfPartsToDraw);
-		partToDraw++;
-		if (partToDraw == noOfPartsToDraw) {
-			partToDraw = -1;
+
+	skybox->draw(quadFBO, *camera);
+	for (auto obj : sceneObjects) {
+		obj->update();
+		obj->draw(quadFBO, *camera, lights);
+	}
+	if (sliceToDraw >= 0) {
+		voxels->drawHalfAngleLayer(*camera, *quadDepthTexture, lights[0], *skybox, sliceToDraw, totalNumberOfSlices);
+		sliceToDraw++;
+		if (sliceToDraw >= totalNumberOfSlices) {
+			sliceToDraw = -1;
 		}
 	}
 
-	quadFBO.Bind();
-	if (partToDraw >= 0) {
-		voxels->drawBoundingGeometryOnScreen(*camera, (1.0f - std::powf(partToDraw / (float)noOfPartsToDraw, 0.2f)) * 0.3f);
+	if (sliceToDraw >= 0) {
+		voxels->drawBoundingGeometryOnScreen(quadFBO, *camera, (1.0f - std::powf(sliceToDraw / (float)totalNumberOfSlices, 0.2f)) * 0.3f);
 	}
 
-	voxels->drawQuad(*quadDepthTexture);
-	voxels->drawTransferFunction();
+	voxels->drawQuad(quadFBO);
+	voxels->drawTransferFunction(quadFBO);
 
 	FBO::BindDefault();
 	quadShader->Activate();

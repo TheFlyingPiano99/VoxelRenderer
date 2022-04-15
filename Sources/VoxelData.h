@@ -42,7 +42,7 @@ class VoxelData
 	Texture2D* opacityTextures[2] = {nullptr};
 	Texture2D* quadDepthTexture = nullptr;
 
-	FBO quadFBO;
+	FBO voxelQuadFBO;
 
 	BoundingBox boundingBox;
 	BoundingGeometry boundingGeometry;
@@ -111,10 +111,10 @@ public :
 	void control(float dt, bool paused, float cameraLastActive);
 	void drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount);
 	void drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount);
-	void drawQuad(Texture2D& targetDepthTexture);
+	void drawQuad(FBO& fbo);
 	void drawBoundingGeometry(Camera& camera, std::vector<Light>& lights);
-	void drawBoundingGeometryOnScreen(Camera& camera, float opacity);
-	void drawTransferFunction();
+	void drawBoundingGeometryOnScreen(FBO& fbo, Camera& camera, float opacity);
+	void drawTransferFunction(FBO& fbo);
 	void resetOpacity(Light& light);
 
 	void shiftIntersectionPlane(float delta);

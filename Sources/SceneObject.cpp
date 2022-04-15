@@ -20,9 +20,10 @@ void SceneObject::animate(float dt)
 	}
 }
 
-void SceneObject::draw(Camera& camera, std::vector<Light>& lights)
+void SceneObject::draw(FBO& fbo, Camera& camera, std::vector<Light>& lights)
 {
 	if (nullptr != mesh && nullptr != shader) {
+		fbo.Bind();
 		shader->Activate();
 		exportMatrix();
 		camera.exportData(*shader);
@@ -37,7 +38,9 @@ void SceneObject::draw(Camera& camera, std::vector<Light>& lights)
 		glEnable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);
 		glDepthFunc(GL_LESS);
+		glDepthMask(GL_TRUE);
 		mesh->Draw(*shader, camera);
+		fbo.Unbind();
 	}
 }
 

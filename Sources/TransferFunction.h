@@ -7,6 +7,7 @@
 #include "Texture2D.h"
 #include "VAO.h"
 #include "Texture3D.h"
+#include "FBO.h"
 
 struct Feature {
 	std::vector<glm::ivec2> elements;
@@ -184,7 +185,7 @@ public:
 	void singleColor(glm::vec3 color);
 	void removeColor(glm::vec3 color);
 	void grayscale();
-	void draw();
+	void draw(FBO& fbo);
 	void Bind();
 	void Unbind();
 	void clear();

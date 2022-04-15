@@ -50,6 +50,6 @@ public:
 	void updateGeometry(Texture3D& voxelTexture, TransferFunction& transferFunction, float threshold);
 
 	void draw(Camera& camera, std::vector<Light>& lights, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, FBO& enterFBO, FBO& exitFBO, FBO* lightFBOs);
-	void drawOnScreen(Camera& camera, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, float opacity);
+	void drawOnScreen(FBO& fbo, Camera& camera, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, float opacity);
 };
 

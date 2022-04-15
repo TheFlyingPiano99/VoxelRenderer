@@ -1,7 +1,8 @@
 #include "SkyBox.h"
 #include<glm/gtc/type_ptr.hpp>
 
-void SkyBox::draw(Camera& camera) {
+void SkyBox::draw(FBO& fbo, Camera& camera) {
+    fbo.Bind();
     glDepthMask(GL_FALSE);
     glEnable(GL_CULL_FACE);
     glDisable(GL_BLEND);
@@ -13,4 +14,5 @@ void SkyBox::draw(Camera& camera) {
     texture.Bind();
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glDepthMask(GL_TRUE);
+    fbo.Unbind();
 }

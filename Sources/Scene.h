@@ -33,8 +33,8 @@ class Scene
 	bool gravitation = false;
 	float cameraLastActive = 1000.0f;
 	unsigned int contextWidth, contextHeight;
-	int partToDraw = -1;
-	int noOfPartsToDraw = std::sqrt(256*256 + 256*256 + 256*256) * 1.1f;
+	int sliceToDraw = -1;
+	int totalNumberOfSlices = std::sqrt(256*256 + 256*256 + 256*256) * 1.1f;
 
 	FBO quadFBO;
 	Texture2D* quadColorTexture = nullptr;

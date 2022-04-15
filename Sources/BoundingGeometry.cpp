@@ -308,7 +308,6 @@ void BoundingGeometry::draw(Camera& camera, std::vector<Light>& lights, glm::mat
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-	
 
 	for (int i = 0; i < lights.size(); i++) {
 		lightFBOs[i].Bind();
@@ -323,10 +322,12 @@ void BoundingGeometry::draw(Camera& camera, std::vector<Light>& lights, glm::mat
 		glUniformMatrix4fv(glGetUniformLocation(modelPosShader->ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(lights[i].viewProjMatrix));
 		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 	}
+	FBO::BindDefault();
 }
 
-void BoundingGeometry::drawOnScreen(Camera& camera, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, float opacity)
+void BoundingGeometry::drawOnScreen(FBO& fbo, Camera& camera, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, float opacity)
 {
+	fbo.Bind();
 	flatColorShader->Activate();
 	VAO.Bind();
 	glEnable(GL_DEPTH_TEST);
@@ -345,4 +346,5 @@ void BoundingGeometry::drawOnScreen(Camera& camera, glm::mat4& modelMatrix, glm:
 
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 	glDepthMask(GL_TRUE);
+	fbo.Unbind();
 }
