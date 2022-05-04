@@ -175,13 +175,13 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 	opacitySampleCamSpacePos /= opacitySampleCamSpacePos.w;
 	vec2 lightTexCoord = opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5);
 	vec4 dstLightAttenuation = texture(opacityTexture, lightTexCoord);	// rgb = indirect attenuation | a = direct attenuation
-	/*
+	
 	vec4 modelSpacePlanePos = sceneObject.invModelMatrix * vec4(slicingPlane.position, 1);
 	modelSpacePlanePos /= modelSpacePlanePos.w;
 	vec4 slicingPlaneModelNormal = vec4(slicingPlane.normal, 0) * sceneObject.modelMatrix;
-	*/
+	
 	if (length(exit - enter) > 0.00000001
-		//&& dot(normalize(modelPos - modelSpacePlanePos.xyz), slicingPlaneModelNormal.xyz) < 0.0
+		&& dot(normalize(modelPos - modelSpacePlanePos.xyz), slicingPlaneModelNormal.xyz) < 0.0
 		&& dot(normalize(modelPos - enter), normalize(exit - enter)) > 0.0 //Use this until no tesselletad slices
 		&& dot(normalize(modelPos - exit), normalize(enter - exit)) > 0.0 // Use this until no tesselletad slices
 	) {
@@ -190,10 +190,7 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 		vec4 gradientIntesity = resampleGradientAndDensity(modelPos + offset, trilinearInterpolation(modelPos + offset));	// xyz = gradient | w = intensity
 		colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));	// xyz = Color | w = attenuation
 		vec3 viewDir = normalize(enter - exit);
-		float cosHalfway = dot(viewDir, modelSliceNormal);
-		if (cosHalfway < 0.0) {
-			cosHalfway = dot(-viewDir, modelSliceNormal);
-		}
+		float cosHalfway = abs(dot(viewDir, modelSliceNormal));
 		if (cosHalfway == 0.0) {
 			cosHalfway = 1.0;
 		}
@@ -201,8 +198,8 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 		float g = min(length(gradientIntesity.xyz), 1);	// Using gradient magnitude to interpolate between Blinn-Phong and diffuse color.
 		vec3 Cl = g * bp + (1 - g) * colorAttenuation.rgb;// Interpolate between Blinn-Phong and diffuse color
 		vec3 lightIntensity = lights[0].powerDensity;	// Assuming directional light
-		vec3 bluredLightAttenuation = BlurLight(lightTexCoord, 0.05 * delta / cosHalfway, dstLightAttenuation);
-		color.rgb = lightIntensity * (max(1 - dstLightAttenuation.a, 0) + max(1 - bluredLightAttenuation.rgb, vec3(0))) * Cl * delta / cosHalfway;	// L * (alpha + alpha_i) * C_l
+		vec3 bluredLightAttenuation = BlurLight(lightTexCoord, 0.05 * delta * cosHalfway, dstLightAttenuation);
+		color.rgb = lightIntensity * (max(1 - dstLightAttenuation.a, 0) /*+ max(1 - bluredLightAttenuation.rgb, vec3(0))*/) * Cl * delta / cosHalfway;	// L * (alpha + alpha_i) * C_l
 		color.a = max(colorAttenuation.a * delta / cosHalfway, 0.0);
 		srcLightAttenuation = max(vec4(colorAttenuation.a * normalize(1 - colorAttenuation.rgb), colorAttenuation.a) * delta / cosHalfway, vec4(0.0));	// Calculate indirect (rgb) and direct (a) light attenuation
 	}
