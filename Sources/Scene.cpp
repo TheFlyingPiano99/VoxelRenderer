@@ -379,7 +379,7 @@ void Scene::draw()
 	if (cameraMoved || voxels->popChanged()) {
 		sliceToDraw = 0;
 		voxels->drawBoundingGeometry(*camera, lights);
-		voxels->resetOpacity(lights[0]);
+		voxels->resetOpacity();
 	}
 
 	skybox->draw(quadFBO, *camera);

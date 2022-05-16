@@ -140,8 +140,8 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngle, Shader* quad
 	STFradius(0.25f),
 	STFEmission(1.0f),
 	STFOpacity(1.0f),
-	shininess(10.0f),
-	specularColor(0.56f, 0.56f, 0.5f),
+	shininess(30.0f),
+	specularColor(0.1f, 0.1f, 0.1f),
 	ambientColor(0.005f, 0.005f, 0.005f),
 	slicingPlane(glm::vec3(position), glm::vec3(1, 0, 0)) {
 
@@ -209,11 +209,11 @@ void VoxelData::drawBoundingGeometry(Camera& camera, std::vector<Light>& lights)
 	boundingGeometry.draw(camera, lights, modelMatrix, invModelMatrix, enterFBO, exitFBO, lightFBOs);
 }
 
-void VoxelData::resetOpacity(Light& light)
+void VoxelData::resetOpacity()
 {
 	voxelQuadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[0], 0);
 	glClearDepth(1.0f);
-	glClearColor(1 - light.powerDensity.r, 1 - light.powerDensity.g, 1 - light.powerDensity.b, 0);
+	glClearColor(0.0, 0.0, 0.0, 0.0);
 	voxelQuadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT1 });
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

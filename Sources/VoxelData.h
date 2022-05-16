@@ -115,7 +115,7 @@ public :
 	void drawBoundingGeometry(Camera& camera, std::vector<Light>& lights);
 	void drawBoundingGeometryOnScreen(FBO& fbo, Camera& camera, float opacity);
 	void drawTransferFunction(FBO& fbo);
-	void resetOpacity(Light& light);
+	void resetOpacity();
 
 	void shiftIntersectionPlane(float delta);
 	void rotateIntersectionPlane(float rad);
