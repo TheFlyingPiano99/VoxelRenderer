@@ -34,7 +34,7 @@ class Scene
 	float cameraLastActive = 1000.0f;
 	unsigned int contextWidth, contextHeight;
 	int sliceToDraw = -1;
-	int totalNumberOfSlices = std::sqrt(256*256 + 256*256 + 256*256) * 1.1f;
+	int totalNumberOfSlices = std::sqrt(256*256 + 256*256 + 256*256) * 1.5f;
 
 	FBO quadFBO;
 	Texture2D* quadColorTexture = nullptr;

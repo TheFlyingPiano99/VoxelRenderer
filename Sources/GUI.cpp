@@ -49,6 +49,7 @@ void GUI::configToScene(Scene& scene)
 	ImGui::SliderFloat("Light power", &scene.getLightsPower(), 0.0f, 1.0f);
 
 	ImGui::SliderFloat("Bounding geometry threshold", &scene.getVoxelData()->getBoundingGeometryThreshold(), 0.0f, 0.01f);
+	ImGui::SliderFloat("Sampling noise scale", &scene.getVoxelData()->getNoiseScale(), 0.0f, 10.0f);
 	ImGui::SliderFloat("Transfer function flood fill threshold", &scene.getVoxelData()->getTransferFloodFillThreshold(), 0.0f, 5.0f);
 
 	const char* current_item = scene.getVoxelData()->getCurrentTransferRegionSelectModes();

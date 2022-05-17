@@ -366,7 +366,7 @@ void Scene::animate(float dt)
 
 void Scene::draw()
 {
-
+	static bool reDraw = true;
 	bool cameraMoved = camera->update();
 
 	quadFBO.Bind();
@@ -380,6 +380,7 @@ void Scene::draw()
 		sliceToDraw = 0;
 		voxels->drawBoundingGeometry(*camera, lights);
 		voxels->resetOpacity();
+		reDraw = true;
 	}
 
 	skybox->draw(quadFBO, *camera);
@@ -387,16 +388,19 @@ void Scene::draw()
 		obj->update();
 		obj->draw(quadFBO, *camera, lights);
 	}
+	/*
 	if (sliceToDraw >= 0) {
 		voxels->drawHalfAngleLayer(*camera, *quadDepthTexture, lights[0], *skybox, sliceToDraw, totalNumberOfSlices);
 		sliceToDraw++;
 		if (sliceToDraw >= totalNumberOfSlices) {
 			sliceToDraw = -1;
 		}
-	}
-
-	if (sliceToDraw >= 0) {
 		voxels->drawBoundingGeometryOnScreen(quadFBO, *camera, (1.0f - std::powf(sliceToDraw / (float)totalNumberOfSlices, 0.2f)) * 0.3f);
+	}
+	*/
+	if (reDraw) {
+		voxels->drawFullWithHalfAngleSlice(*camera, *quadDepthTexture, lights[0], *skybox);
+		reDraw = false;
 	}
 
 	voxels->drawQuad(quadFBO);

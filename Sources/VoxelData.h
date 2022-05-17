@@ -69,6 +69,8 @@ class VoxelData
 	float transferFloodFillTreshold;
 	float STFradius, STFOpacity, STFEmission;
 
+	float noiseScale = 0.2;
+
 	float shininess;
 	glm::vec3 specularColor;
 	glm::vec3 ambientColor;
@@ -111,6 +113,7 @@ public :
 	void control(float dt, bool paused, float cameraLastActive);
 	void drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount);
 	void drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount);
+	void drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox);
 	void drawQuad(FBO& fbo);
 	void drawBoundingGeometry(Camera& camera, std::vector<Light>& lights);
 	void drawBoundingGeometryOnScreen(FBO& fbo, Camera& camera, float opacity);
@@ -133,6 +136,10 @@ public :
 
 	float& getGamma() {
 		return gamma;
+	}
+	
+	float& getNoiseScale() {
+		return noiseScale;
 	}
 
 	float& getBoundingGeometryThreshold() {

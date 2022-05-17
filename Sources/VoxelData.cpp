@@ -12,13 +12,14 @@ void VoxelData::exportData(Shader* shader)
 	Dimensions dim = voxelTexture->getDimensions();
 	glUniform3f(glGetUniformLocation(shader->ID, "resolution"),
 		dim.width , dim.height, dim.depth);
+	glUniform1f(glGetUniformLocation(shader->ID, "noiseScale"), noiseScale);
 	glUniform1f(glGetUniformLocation(shader->ID, "shininess"), shininess);
 	glUniform3f(glGetUniformLocation(shader->ID, "specularColor"), specularColor.r, specularColor.g, specularColor.b);
 	glUniform3f(glGetUniformLocation(shader->ID, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "sceneObject.modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 	glUniformMatrix4fv(glGetUniformLocation(shader->ID, "sceneObject.invModelMatrix"), 1, GL_FALSE, glm::value_ptr(invModelMatrix));
 	glUniform1ui(glGetUniformLocation(shader->ID, "shadowSamples"), shadowSamples);
-	slicingPlane.exportData(shader, "slicingPlane");
+	slicingPlane.exportData(shader, "worldCrossSectionPlane");
 }
 
 bool VoxelData::readDimensions(const char* path, std::string& name, Dimensions& dimensions)
@@ -286,7 +287,7 @@ void VoxelData::drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& l
 void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount)
 {
 	float assumedDiameter = glm::length(scale * glm::vec3(voxelTexture->dimensions.width, voxelTexture->dimensions.height, voxelTexture->dimensions.depth));
-	float delta = assumedDiameter / stepCount;
+	float delta = assumedDiameter / (float)stepCount;
 
 	glm::vec3 viewDir = glm::normalize(camera.eye - position);
 	glm::vec3 lightDir = glm::normalize(glm::vec3(light.position.x, light.position.y, light.position.z) - position);
@@ -319,7 +320,7 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	camera.exportData(*voxelHalfAngleShader);
 	light.exportData(*voxelHalfAngleShader, 0);
 
-	glUniform1f(glGetUniformLocation(voxelHalfAngleShader->ID, "delta"), delta);
+	glUniform1f(glGetUniformLocation(voxelHalfAngleShader->ID, "halfwaySlicePlaneDelta"), delta);
 
 	glActiveTexture(GL_TEXTURE0 + 5);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.getTexture().ID);
@@ -330,11 +331,11 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	exitTexture->Bind();
 
 	glm::vec4 modelSliceNormal = glm::vec4(halfway.x, halfway.y, halfway.z, 0.0) * modelMatrix;
-	glUniform3f(glGetUniformLocation(voxelHalfAngleShader->ID, "modelSliceNormal"), modelSliceNormal.x, modelSliceNormal.y, modelSliceNormal.z);
+	glUniform3f(glGetUniformLocation(voxelHalfAngleShader->ID, "modelHalfwaySlicePlane.normal"), modelSliceNormal.x, modelSliceNormal.y, modelSliceNormal.z);
 
 	unsigned int source;
 	unsigned int target;
-	{		// Loop here
+	{		// Loop here, if you want to draw all layers in one frame
 		source = currentStep % 2;
 		target = (currentStep + 1) % 2;
 		glm::vec3 slicePosition = position - halfway * abs(glm::dot(halfway, viewDir)) * assumedDiameter * (currentStep / (float)stepCount - 0.5f);
@@ -353,6 +354,83 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	glDepthMask(GL_TRUE);
 	voxelQuadFBO.Unbind();
 }
+
+void VoxelData::drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox)
+{
+	float assumedDiameter = glm::length(scale * glm::vec3(voxelTexture->dimensions.width, voxelTexture->dimensions.height, voxelTexture->dimensions.depth));
+	int stepCount = sqrt(256 * 256 + 256 * 256 + 256 * 256);
+	float delta = assumedDiameter / (float)stepCount;
+
+	glm::vec3 viewDir = glm::normalize(camera.eye - position);
+	glm::vec3 lightDir = glm::normalize(glm::vec3(light.position.x, light.position.y, light.position.z) - position);
+	glm::vec3 halfway;
+	glm::vec4 modelSliceNormal;
+	if (glm::dot(viewDir, lightDir) < 0.0) {
+		halfway = glm::normalize(-viewDir + lightDir);
+		modelSliceNormal = glm::vec4(-halfway.x, -halfway.y, -halfway.z, 0.0) * modelMatrix;
+	}
+	else {
+		halfway = glm::normalize(viewDir + lightDir);
+		modelSliceNormal = glm::vec4(halfway.x, halfway.y, halfway.z, 0.0) * modelMatrix;
+	}
+	delta *= abs(glm::dot(halfway, viewDir));
+	voxelQuadFBO.Bind();
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	if (glm::dot(viewDir, lightDir) < 0.0) {
+		glBlendFunci(0, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);	// Back to front
+	}
+	else {
+		glBlendFunci(0, GL_ONE_MINUS_DST_ALPHA, GL_ONE);	// Front to back
+	}
+	glBlendFunci(1, GL_ONE, GL_ZERO);
+
+	voxelQuadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, targetDepthTeture, 0);
+	voxelQuadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
+	voxelHalfAngleShader->Activate();
+	this->exportData(voxelHalfAngleShader);
+	camera.exportData(*voxelHalfAngleShader);
+	light.exportData(*voxelHalfAngleShader, 0);
+
+	glm::vec3 n = glm::normalize(glm::vec3(modelSliceNormal.x, modelSliceNormal.y, modelSliceNormal.z));
+	glUniform1f(glGetUniformLocation(voxelHalfAngleShader->ID, "halfwaySlicePlaneDelta"), delta);
+	glUniform3f(glGetUniformLocation(voxelHalfAngleShader->ID, "modelHalfwaySlicePlane.normal"), n.x, n.y, n.z);
+
+	glActiveTexture(GL_TEXTURE0 + 5);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.getTexture().ID);
+
+	voxelTexture->Bind();
+	transferFunction.Bind();
+	enterTexture->Bind();
+	exitTexture->Bind();
+
+
+	unsigned int source;
+	unsigned int target;
+	for (int currentStep = 0; currentStep < stepCount; currentStep++)
+	{
+		source = currentStep % 2;
+		target = (currentStep + 1) % 2;
+		glm::vec3 slicePosition = position - halfway * abs(glm::dot(halfway, viewDir)) * assumedDiameter * (currentStep / (float)stepCount - 0.5f);
+		glm::vec4 modelSlicePosition = invModelMatrix * glm::vec4(slicePosition.x, slicePosition.y, slicePosition.z, 1.0);
+		modelSlicePosition = modelSlicePosition / modelSlicePosition.w;
+		voxelQuadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *opacityTextures[target], 0);
+		opacityTextures[source]->Bind();
+		drawProxyGeometry(camera, modelSlicePosition, modelSliceNormal);
+	}
+
+	voxelTexture->Unbind();
+	transferFunction.Unbind();
+	enterTexture->Unbind();
+	exitTexture->Unbind();
+	opacityTextures[source]->Unbind();
+	glDepthMask(GL_TRUE);
+	voxelQuadFBO.Unbind();
+}
+
 
 void VoxelData::drawQuad(FBO& fbo) {
 	fbo.Bind();
@@ -759,4 +837,5 @@ void VoxelData::initBoundingBox(Dimensions& dim, BoundingBox& box) {
 	box.edges[11].direction = glm::vec3(0, 0, -1);
 	box.edges[11].length = resolution.z;
 }
+
 
