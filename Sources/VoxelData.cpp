@@ -364,15 +364,13 @@ void VoxelData::drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDept
 	glm::vec3 viewDir = glm::normalize(camera.eye - position);
 	glm::vec3 lightDir = glm::normalize(glm::vec3(light.position.x, light.position.y, light.position.z) - position);
 	glm::vec3 halfway;
-	glm::vec4 modelSliceNormal;
 	if (glm::dot(viewDir, lightDir) < 0.0) {
 		halfway = glm::normalize(-viewDir + lightDir);
-		modelSliceNormal = glm::vec4(-halfway.x, -halfway.y, -halfway.z, 0.0) * modelMatrix;
 	}
 	else {
 		halfway = glm::normalize(viewDir + lightDir);
-		modelSliceNormal = glm::vec4(halfway.x, halfway.y, halfway.z, 0.0) * modelMatrix;
 	}
+	glm::vec4 modelSliceNormal = glm::vec4(halfway.x, halfway.y, halfway.z, 0.0) * modelMatrix;
 	delta *= abs(glm::dot(halfway, viewDir));
 	voxelQuadFBO.Bind();
 	glDisable(GL_CULL_FACE);
