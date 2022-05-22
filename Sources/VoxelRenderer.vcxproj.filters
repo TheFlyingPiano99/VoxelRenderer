@@ -343,10 +343,13 @@
     <None Include="..\Resources\Shaders\skybox.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="..\Resources\Shaders\voxelHalfAngle.frag">
+    <None Include="..\Resources\Shaders\voxelHalfAngleColor.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="..\Resources\Shaders\boundingBox.vert">
+    <None Include="..\Resources\Shaders\proxyGeometry.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\Resources\Shaders\voxelHalfAngleAttenuation.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
   </ItemGroup>

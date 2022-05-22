@@ -7,7 +7,7 @@
 in vec3 modelPos;
 
 layout (location = 0) out vec4 FragColor;
-layout (location = 1) out vec4 FragOpacity;
+layout (location = 1) out vec4 FragColorAttenuation;
 
 layout (binding = 0) uniform sampler3D voxels;
 layout (binding = 1) uniform sampler2D colorAttenuationTransfer;
@@ -42,14 +42,15 @@ struct Plane {
 };
 uniform Plane worldCrossSectionPlane;	// <
 uniform Plane modelHalfwaySlicePlane;	// <	- The two planes are stored in different spaces!!!
-uniform float halfwaySlicePlaneDelta;
+uniform float modelHalfwaySlicePlaneDelta;
 
 uniform float noiseScale;
 
 struct Camera {
 	mat4 viewProjMatrix;
 };
-uniform Camera camera;
+uniform Camera viewCamera;
+uniform Camera lightCamera;
 
 struct Light {
 	vec4 position;
@@ -70,8 +71,7 @@ float noise(vec2 n) {
 }
 
 vec3 intersectPlane(vec3 linePos, vec3 lineDir, vec3 planePos, vec3 planeNormal) {
-	float t = dot(planePos - linePos, planeNormal) / dot(lineDir, planeNormal);
-	return linePos + lineDir * t;
+	return linePos + lineDir * dot(planePos - linePos, planeNormal) / dot(lineDir, planeNormal);
 }
 
 float trilinearInterpolation(vec3 currentPos) {
@@ -159,19 +159,20 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 
 	vec4 lightModelSpacePos = sceneObject.invModelMatrix * lights[0].position;
 	float lightDistance;
-	vec3 lightDiff;
+	vec3 modelLightDiff;
 	if (lightModelSpacePos.w == 0.0) {
-		lightDiff = lightModelSpacePos.xyz - modelPos * lights[0].position.w;
+		modelLightDiff = lightModelSpacePos.xyz;
 		lightDistance = 1.0;
 	}
 	else {
 		lightModelSpacePos /= lightModelSpacePos.w;
-		lightDiff = lightModelSpacePos.xyz - modelPos * lights[0].position.w;
-		lightDistance = length(lightDiff);
+		modelLightDiff = lightModelSpacePos.xyz - modelPos * lightModelSpacePos.w;
+		lightDistance = length(modelLightDiff);
 	}
-	vec3 lightDir = normalize(lightDiff);
-	vec3 opacitySampleModelSpacePos = intersectPlane(modelPos, lightDir, modelPos + halfwaySlicePlaneDelta * modelHalfwaySlicePlane.normal, modelHalfwaySlicePlane.normal);
-	vec4 opacitySampleCamSpacePos = camera.viewProjMatrix * sceneObject.modelMatrix * vec4(opacitySampleModelSpacePos, 1.0);
+	vec3 lightDir = normalize(modelLightDiff);
+	vec3 modelOpacitySamplePos = intersectPlane(modelPos, lightDir, modelPos + modelHalfwaySlicePlaneDelta * modelHalfwaySlicePlane.normal, modelHalfwaySlicePlane.normal);
+	//vec3 modelOpacitySamplePos = modelPos + modelHalfwaySlicePlaneDelta * modelHalfwaySlicePlane.normal;
+	vec4 opacitySampleCamSpacePos = viewCamera.viewProjMatrix * sceneObject.modelMatrix * vec4(modelOpacitySamplePos, 1.0);
 	opacitySampleCamSpacePos /= opacitySampleCamSpacePos.w;
 	vec2 opacitySampleTexCoord = opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5);
 	vec4 dstLightAttenuation = texture(opacityTexture, opacitySampleTexCoord);	// dstLightAttenuation = (rgb = indirect attenuation | a = direct attenuation)
@@ -186,6 +187,7 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 			colorAttenuation = texture(colorAttenuationTransfer, vec2(gradientIntesity.w, length(gradientIntesity.xyz)));	// xyz = Color | w = attenuation
 			vec3 viewDir = normalize(enter - exit);
 			float cosHalfway = abs(dot(viewDir, modelHalfwaySlicePlane.normal));
+			//float cosHalfway = 1.0;
 			if (cosHalfway == 0.0) {
 				cosHalfway = 1.0;
 			}
@@ -193,24 +195,22 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 			float g = min(length(gradientIntesity.xyz), 1);	// Using gradient magnitude to interpolate between Blinn-Phong and diffuse color.
 			vec3 Cl = g * bp + (1 - g) * colorAttenuation.rgb;// Interpolate between Blinn-Phong and diffuse color, to get color of volume.
 			vec3 lightIntensity = lights[0].powerDensity;	// Assuming directional light
-			vec3 bluredIndirectLightAttenuation = BlurLight(opacitySampleTexCoord, 0.05 * halfwaySlicePlaneDelta * cosHalfway, dstLightAttenuation);
+			vec3 bluredIndirectLightAttenuation = BlurLight(opacitySampleTexCoord, 0.05 * modelHalfwaySlicePlaneDelta /** cosHalfway*/, dstLightAttenuation);
 			// Calculate: L * (alpha + alpha_i) * C_l * d:
 			color.rgb = lightIntensity * (
 							max(1 - dstLightAttenuation.a, 0) 
 							+ max(1 - bluredIndirectLightAttenuation.rgb, vec3(0))
 						)
-						* Cl * halfwaySlicePlaneDelta / cosHalfway;	
-			color.a = max(colorAttenuation.a * halfwaySlicePlaneDelta / cosHalfway, 0.0);
-			vec3 indirectAttenuation = colorAttenuation.a * normalize(1 - colorAttenuation.rgb);	// Heuristic calculation to get translucent volume.
-			srcLightAttenuation = max(vec4(indirectAttenuation, colorAttenuation.a) * halfwaySlicePlaneDelta / cosHalfway, vec4(0.0));	// Calculate indirect (rgb) and direct (a) light attenuation
+						* Cl * modelHalfwaySlicePlaneDelta / cosHalfway;	
+			color.a = max(colorAttenuation.a * modelHalfwaySlicePlaneDelta / cosHalfway, 0.0);
 		}
 	}
-	FragOpacity = srcLightAttenuation + dstLightAttenuation * (1 - srcLightAttenuation);	// Over operator
+	FragColorAttenuation = colorAttenuation;
 	return color;
 }
 
 void main() {
-	vec4 temp = camera.viewProjMatrix * sceneObject.modelMatrix * vec4(modelPos, 1.0);
+	vec4 temp = viewCamera.viewProjMatrix * sceneObject.modelMatrix * vec4(modelPos, 1.0);
 	vec2 tex = (temp.xy / temp.w + 1.0) * 0.5;
 	vec3 enter = texture(enterTexture, tex).xyz;
 	vec3 exit = texture(exitTexture, tex).xyz;

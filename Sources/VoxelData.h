@@ -28,7 +28,8 @@ struct BoundingBox {
 class VoxelData
 {
 	Shader* voxelShader = nullptr;	// Don't delete!
-	Shader* voxelHalfAngleShader = nullptr;	// Don't delete!
+	Shader* voxelHalfAngleColorShader = nullptr;	// Don't delete!
+	Shader* voxelHalfAngleAttenuationShader = nullptr;	// Don't delete!
 	Shader* quadShader = nullptr;	// Don't delete!
 	Texture3D* voxelTexture = nullptr;
 	Texture2D* quadTexture = nullptr;
@@ -39,10 +40,13 @@ class VoxelData
 	Texture2D* exitTexture = nullptr;
 	FBO lightFBOs[MAX_LIGHT_COUNT];
 	Texture2D* lightTextures[MAX_LIGHT_COUNT] = {nullptr};
+	FBO colorAttenuationFBO;
 	Texture2D* opacityTextures[2] = {nullptr};
 	Texture2D* quadDepthTexture = nullptr;
+	Texture2D* colorAttenuationTexture = nullptr;
 
 	FBO voxelQuadFBO;
+	FBO lightQuadFBO;
 
 	BoundingBox boundingBox;
 	BoundingGeometry boundingGeometry;
@@ -106,7 +110,7 @@ class VoxelData
 	}
 
 public :
-	VoxelData(Shader* _shader, Shader* _voxelHalfAngle, Shader* quadShader, Shader* boundingShader, Shader* _flatColorBoundingShader, Shader* transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight);
+	VoxelData(Shader* _shader, Shader* _voxelHalfAngleColor, Shader* _voxelHalfAngleAttenuation, Shader* quadShader, Shader* boundingShader, Shader* _flatColorBoundingShader, Shader* transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight);
 	~VoxelData();
 
 	void animate(float dt);
