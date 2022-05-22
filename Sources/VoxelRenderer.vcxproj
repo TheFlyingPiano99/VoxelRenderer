@@ -252,7 +252,7 @@
   <ItemGroup>
     <None Include="..\Resources\Shaders\bounding.frag" />
     <None Include="..\Resources\Shaders\bounding.vert" />
-    <None Include="..\Resources\Shaders\proxyGeometry.vert" />
+    <None Include="..\Resources\Shaders\boundingBox.vert" />
     <None Include="..\Resources\Shaders\default.frag" />
     <None Include="..\Resources\Shaders\default.vert" />
     <None Include="..\Resources\Shaders\flatColor.frag" />
@@ -266,8 +266,7 @@
     <None Include="..\Resources\Shaders\transfer.frag" />
     <None Include="..\Resources\Shaders\transfer.vert" />
     <None Include="..\Resources\Shaders\voxel.frag" />
-    <None Include="..\Resources\Shaders\voxelHalfAngleAttenuation.frag" />
-    <None Include="..\Resources\Shaders\voxelHalfAngleColor.frag" />
+    <None Include="..\Resources\Shaders\voxelHalfAngle.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

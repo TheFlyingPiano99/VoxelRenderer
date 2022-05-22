@@ -203,13 +203,9 @@ void Scene::initMeshesShadersObjects()
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("voxel.frag").c_str()
 	);
-	Shader* voxelHalfAngleColorShader = new Shader(
-		AssetManager::getInstance()->getShaderFolderPath().append("proxyGeometry.vert").c_str(),
-		AssetManager::getInstance()->getShaderFolderPath().append("voxelHalfAngleColor.frag").c_str()
-	);
-	Shader* voxelHalfAngleAttenuationShader = new Shader(
-		AssetManager::getInstance()->getShaderFolderPath().append("proxyGeometry.vert").c_str(),
-		AssetManager::getInstance()->getShaderFolderPath().append("voxelHalfAngleAttenuation.frag").c_str()
+	Shader* voxelHalfAngleShader = new Shader(
+		AssetManager::getInstance()->getShaderFolderPath().append("BoundingBox.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("voxelHalfAngle.frag").c_str()
 	);
 	Shader* quadShader = new Shader(
 		AssetManager::getInstance()->getShaderFolderPath().append("quad.vert").c_str(),
@@ -237,8 +233,7 @@ void Scene::initMeshesShadersObjects()
 	);
 
 	shaders.push_back(voxelShader);
-	shaders.push_back(voxelHalfAngleColorShader);
-	shaders.push_back(voxelHalfAngleAttenuationShader);
+	shaders.push_back(voxelHalfAngleShader);
 	shaders.push_back(quadShader);
 	shaders.push_back(quadDepthShader);
 	shaders.push_back(boundingShader);
@@ -267,7 +262,7 @@ void Scene::initMeshesShadersObjects()
 	if (selection > 2 || selection < 0) {
 		selection = 0;
 	}
-	voxels = new VoxelData(voxelShader, voxelHalfAngleColorShader, voxelHalfAngleAttenuationShader, quadDepthShader, boundingShader, flatColorBoundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
+	voxels = new VoxelData(voxelShader, voxelHalfAngleShader, quadDepthShader, boundingShader, flatColorBoundingShader, transferShader, &quadVAO, paths[selection], contextWidth, contextHeight);
 	voxels->loadFeatures();
 }
 
@@ -352,15 +347,15 @@ void Scene::animate(float dt)
 	}
 	voxels->animate(dt);
 
-	glm::vec3 dir = glm::normalize(camera->center - camera->eye);
-	glm::vec3 right = glm::cross(dir, camera->prefUp);
-	glm::vec3 up = glm::cross(right, dir);
-	glm::vec3 p = voxels->getPosition() - dir * 200.0f + up * 200.0f + right * 200.0f;
-	if (first) {
-		lights[0].position = glm::vec4(p.x, p.y, p.z, 0.0f);
-		first = false;
-	}
-	lights[0].powerDensity = glm::vec3(headLightPower);
+		glm::vec3 dir = glm::normalize(camera->center - camera->eye);
+		glm::vec3 right = glm::cross(dir, camera->prefUp);
+		glm::vec3 up = glm::cross(right, dir);
+		glm::vec3 p = voxels->getPosition() - dir * 200.0f + up * 200.0f + right * 200.0f;
+		if (first) {
+			lights[0].position = glm::vec4(p.x, p.y, p.z, 1.0f);
+			first = false;
+		}
+		lights[0].powerDensity = glm::vec3(headLightPower);
 
 	static float prevPower;
 	if (prevPower != headLightPower) {

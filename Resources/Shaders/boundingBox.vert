@@ -19,5 +19,6 @@ uniform SceneObject sceneObject;
 void main()
 {
 	modelPos = aPos;
-	gl_Position = camera.viewProjMatrix * sceneObject.modelMatrix * vec4(aPos, 1.0);
+	vec4 homogeneCamPos = camera.viewProjMatrix * sceneObject.modelMatrix * vec4(aPos, 1.0);
+	gl_Position = homogeneCamPos;
 }
