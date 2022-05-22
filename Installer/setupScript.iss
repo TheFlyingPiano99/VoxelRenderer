@@ -32,7 +32,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "D:\VisualCpp\VoxelRenderer\x64\Release\VoxelRenderer.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\VisualCpp\VoxelRenderer\Resources\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\VisualCpp\VoxelRenderer\Resources\*"; DestDir: "{app}\Resources\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\VisualCpp\VoxelRenderer\Saves\*"; DestDir: "{app}\Saves\"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

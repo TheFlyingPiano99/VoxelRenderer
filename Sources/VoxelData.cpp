@@ -142,7 +142,7 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngle, Shader* quad
 	STFEmission(1.0f),
 	STFOpacity(1.0f),
 	shininess(30.0f),
-	specularColor(0.1f, 0.1f, 0.1f),
+	specularColor(0.9f, 0.9f, 0.9f),
 	ambientColor(0.005f, 0.005f, 0.005f),
 	slicingPlane(glm::vec3(position), glm::vec3(1, 0, 0)) {
 
@@ -358,7 +358,7 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 void VoxelData::drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox)
 {
 	float assumedDiameter = glm::length(scale * glm::vec3(voxelTexture->dimensions.width, voxelTexture->dimensions.height, voxelTexture->dimensions.depth));
-	int stepCount = sqrt(256 * 256 + 256 * 256 + 256 * 256);
+	int stepCount = sqrt(256 * 256 + 256 * 256 + 256 * 256) * 2;
 	float delta = assumedDiameter / (float)stepCount;
 
 	glm::vec3 viewDir = glm::normalize(camera.eye - position);

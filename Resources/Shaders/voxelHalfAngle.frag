@@ -176,7 +176,9 @@ vec4 calculateColor(vec3 enter, vec3 exit) {
 	vec2 opacitySampleTexCoord = opacitySampleCamSpacePos.xy * 0.5 + vec2(0.5);
 	vec4 dstLightAttenuation = texture(opacityTexture, opacitySampleTexCoord);	// dstLightAttenuation = (rgb = indirect attenuation | a = direct attenuation)
 	
-	if (length(exit - enter) > 0.0) {
+	if (length(exit - enter) > 0.0 
+			&& dot(exit - enter, modelPos - enter) > 0.0 
+			&& dot(enter - exit, modelPos - exit) > 0.0) {
 		vec4 modelCrossSectionPlanePosition = sceneObject.invModelMatrix * vec4(worldCrossSectionPlane.position, 1);
 		modelCrossSectionPlanePosition /= modelCrossSectionPlanePosition.w;
 		vec4 modelSlicingPlaneModelNormal = vec4(worldCrossSectionPlane.normal, 0) * sceneObject.modelMatrix;

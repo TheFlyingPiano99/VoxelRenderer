@@ -1,4 +1,4 @@
-name = cthead
+name = bunny
 width = 512
 height = 512
 depth = 361

@@ -351,7 +351,7 @@ void Scene::animate(float dt)
 		glm::vec3 right = glm::cross(dir, camera->prefUp);
 		glm::vec3 up = glm::cross(right, dir);
 		glm::vec3 p = voxels->getPosition() - dir * 200.0f + up * 200.0f + right * 200.0f;
-		if (first) {
+		if (true) {
 			lights[0].position = glm::vec4(p.x, p.y, p.z, 1.0f);
 			first = false;
 		}
