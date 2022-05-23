@@ -45,9 +45,9 @@ public:
 
 	void updateOrientation(glm::vec3 prefUp);
 	// Exports the camera matrix to a shader
-	void exportMatrix(Shader& shader);
+	void exportMatrix(Shader& shader, const std::string& uniformaName = "camera");
 
-	void exportData(Shader& program);
+	void exportData(Shader& program, const std::string& uniformName = "camera");
 	void exportPostprocessDataAsLightCamera(Shader& program);
 
 	// Obsolete

@@ -204,11 +204,11 @@ void Scene::initMeshesShadersObjects()
 		AssetManager::getInstance()->getShaderFolderPath().append("voxel.frag").c_str()
 	);
 	Shader* voxelHalfAngleColorShader = new Shader(
-		AssetManager::getInstance()->getShaderFolderPath().append("proxyGeometry.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("proxyGeometryViewCamera.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("voxelHalfAngleColor.frag").c_str()
 	);
 	Shader* voxelHalfAngleAttenuationShader = new Shader(
-		AssetManager::getInstance()->getShaderFolderPath().append("proxyGeometry.vert").c_str(),
+		AssetManager::getInstance()->getShaderFolderPath().append("proxyGeometryLightCamera.vert").c_str(),
 		AssetManager::getInstance()->getShaderFolderPath().append("voxelHalfAngleAttenuation.frag").c_str()
 	);
 	Shader* quadShader = new Shader(

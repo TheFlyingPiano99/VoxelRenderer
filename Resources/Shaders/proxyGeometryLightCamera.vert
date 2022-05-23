@@ -7,7 +7,7 @@ out vec3 modelPos;
 struct Camera {
 	mat4 viewProjMatrix;
 };
-uniform Camera camera;
+uniform Camera lightCamera;
 
 struct SceneObject {
 	mat4 modelMatrix;
@@ -19,5 +19,5 @@ uniform SceneObject sceneObject;
 void main()
 {
 	modelPos = aPos;
-	gl_Position = camera.viewProjMatrix * sceneObject.modelMatrix * vec4(aPos, 1.0);
+	gl_Position = lightCamera.viewProjMatrix * sceneObject.modelMatrix * vec4(aPos, 1.0);
 }

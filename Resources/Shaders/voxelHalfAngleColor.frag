@@ -215,4 +215,5 @@ void main() {
 	vec3 enter = texture(enterTexture, tex).xyz;
 	vec3 exit = texture(exitTexture, tex).xyz;
 	FragColor = calculateColor(enter, exit);
+	//FragColor = vec4(1, 0, 0, 1); // For testing
 }

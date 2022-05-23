@@ -9,7 +9,7 @@ in vec3 modelPos;
 layout (location = 0) out vec4 FragColor;
 
 layout (binding = 0) uniform sampler2D colorAttenuationTexture;
-layout (binding = 1) uniform sampler2D opacityTexture;
+layout (binding = 4) uniform sampler2D opacityTexture;
 
 uniform vec3 resolution;
 
@@ -60,11 +60,11 @@ vec3 BlurLight(vec2 texCoord, float offset, vec4 directLightAttenuation) {
 	return sum.rgb;
 }
 
-vec4 calculateAttenuation() {	
+vec4 calculateAttenuation(vec2 lightTex) {	
 	vec4 temp = viewCamera.viewProjMatrix * sceneObject.modelMatrix * vec4(modelPos, 1.0);
-	vec2 tex = (temp.xy / temp.w + 1.0) * 0.5;	
-	vec4 colorAttenuation = texture(colorAttenuationTexture, tex);	// colorAttenuation = (xyz = Color | w = attenuation)
-
+	vec2 viewTex = (temp.xy / temp.w + 1.0) * 0.5;	
+	vec4 colorAttenuation = texture(colorAttenuationTexture, viewTex);	// colorAttenuation = (xyz = Color | w = attenuation)
+	//vec4 previousOpacity = texture(opacityTexture, lightTex);
 	/*
 	float cosHalfway = abs(dot(viewDir, modelHalfwaySlicePlane.normal));
 	//float cosHalfway = 1.0;
@@ -78,6 +78,6 @@ vec4 calculateAttenuation() {
 
 void main() {
 	vec4 temp = lightCamera.viewProjMatrix * sceneObject.modelMatrix * vec4(modelPos, 1.0);
-	vec2 tex = (temp.xy / temp.w + 1.0) * 0.5;
-	FragColor = calculateAttenuation();
+	vec2 lightTex = (temp.xy / temp.w + 1.0) * 0.5;
+	FragColor = calculateAttenuation(lightTex);
 }

@@ -31,26 +31,33 @@ void Camera::updateOrientation(glm::vec3 newPrefUp)
 	prefUp = newPrefUp;
 }
 
-void Camera::exportMatrix(Shader& shader)
+void Camera::exportMatrix(Shader& shader, const std::string& uniformaName)
 {
-	// Exports camera matrix
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(viewProjMatrix));
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "camera.invViewProjMatrix"), 1, GL_FALSE, glm::value_ptr(invViewProjMatrix));
+	std::string copy(uniformaName);
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, copy.append(".viewProjMatrix").c_str()), 1, GL_FALSE, glm::value_ptr(viewProjMatrix));
+	copy = uniformaName;
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, copy.append(".invViewProjMatrix").c_str()), 1, GL_FALSE, glm::value_ptr(invViewProjMatrix));
 }
 
 
-void Camera::exportData(Shader& shader)
+void Camera::exportData(Shader& shader, const std::string& uniformName)
 {
-	glUniform3f(glGetUniformLocation(shader.ID, "camera.position"), eye.x, eye.y, eye.z);
-	glUniform3f(glGetUniformLocation(shader.ID, "camera.center"), center.x, center.y, center.z);
+	std::string copy(uniformName);
+	glUniform3f(glGetUniformLocation(shader.ID, copy.append(".position").c_str()), eye.x, eye.y, eye.z);
+	copy = uniformName;
+	glUniform3f(glGetUniformLocation(shader.ID, copy.append(".center").c_str()), center.x, center.y, center.z);
 	glm::vec3 lookDir = normalize(center - eye);
 	glm::vec3 right = normalize(cross(lookDir, prefUp));
-	glUniform3f(glGetUniformLocation(shader.ID, "camera.right"), right.x, right.y, right.z);
+	copy = uniformName;
+	glUniform3f(glGetUniformLocation(shader.ID, copy.append(".right").c_str()), right.x, right.y, right.z);
 	glm::vec3 up = normalize(cross(right, lookDir));
-	glUniform3f(glGetUniformLocation(shader.ID, "camera.up"), up.x, up.y, up.z);
-	glUniform1f(glGetUniformLocation(shader.ID, "camera.FOVrad"), glm::radians(FOVdeg));
-	glUniform1f(glGetUniformLocation(shader.ID, "camera.aspectRatio"), width / (float)height);
-	exportMatrix(shader);
+	copy = uniformName;
+	glUniform3f(glGetUniformLocation(shader.ID, copy.append(".up").c_str()), up.x, up.y, up.z);
+	copy = uniformName;
+	glUniform1f(glGetUniformLocation(shader.ID, copy.append(".FOVrad").c_str()), glm::radians(FOVdeg));
+	copy = uniformName;
+	glUniform1f(glGetUniformLocation(shader.ID, copy.append(".aspectRatio").c_str()), width / (float)height);
+	exportMatrix(shader, uniformName);
 }
 
 void Camera::exportPostprocessDataAsLightCamera(Shader& shader)

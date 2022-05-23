@@ -98,8 +98,8 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 	exitFBO.LinkRBO(GL_DEPTH_ATTACHMENT, enterExitRbo);
 
 	// Opacity:
-	opacityTextures[0] = new Texture2D(GL_RGBA, glm::vec2(2048, 2048), 1, GL_RGBA, GL_FLOAT);
-	opacityTextures[1] = new Texture2D(GL_RGBA, glm::vec2(2048, 2048), 1, GL_RGBA, GL_FLOAT);
+	opacityTextures[0] = new Texture2D(GL_RGBA, glm::vec2(2048, 2048), 4, GL_RGBA, GL_FLOAT);
+	opacityTextures[1] = new Texture2D(GL_RGBA, glm::vec2(2048, 2048), 4, GL_RGBA, GL_FLOAT);
 
 	// SkyBox is at location 5.
 
@@ -117,9 +117,8 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 	voxelQuadFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *quadTexture, 0);
 	quadDepthTexture = new Texture2D(GL_DEPTH_COMPONENT, glm::vec2(contextWidth, contextHeight), 1, GL_DEPTH_COMPONENT, GL_FLOAT);
 	voxelQuadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, *quadDepthTexture, 0);
-
 	colorAttenuationTexture = new Texture2D(GL_RGBA, glm::vec2(contextWidth, contextHeight), 0, GL_RGBA, GL_FLOAT);
-	colorAttenuationFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *colorAttenuationTexture, 0);
+	voxelQuadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *colorAttenuationTexture, 0);
 }
 
 VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngleColor, Shader* _voxelHalfAngleAttenuation, Shader* quadShader, Shader* _boundingShader, Shader* _flatColorBoundingShader, Shader* _transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight)
@@ -360,8 +359,9 @@ void VoxelData::drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture,
 	voxelQuadFBO.Unbind();
 }
 
-void VoxelData::drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox)
+void VoxelData::drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDepthTexture, Light& light, SkyBox& skybox)
 {
+	voxelHalfAngleColorShader->Activate();
 	voxelQuadFBO.Bind();
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
@@ -387,11 +387,10 @@ void VoxelData::drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDept
 	}
 	glBlendFunci(1, GL_ONE, GL_ZERO);
 	float dotHalfway = glm::dot(worldHalfway, worldViewDir);
-	voxelQuadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, targetDepthTeture, 0);
+	voxelQuadFBO.LinkTexture(GL_DEPTH_ATTACHMENT, targetDepthTexture, 0);
 	voxelQuadFBO.SelectDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
-	voxelHalfAngleColorShader->Activate();
 	this->exportData(voxelHalfAngleColorShader);
-	camera.exportData(*voxelHalfAngleColorShader);
+	camera.exportData(*voxelHalfAngleColorShader, "viewCamera");
 	light.exportData(*voxelHalfAngleColorShader, 0);
 
 	float modelDelta = modelDiameter / (float)stepCount /** abs(glm::dot(worldHalfway, worldViewDir))*/;
@@ -412,26 +411,24 @@ void VoxelData::drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDept
 	transferFunction.Bind();
 	enterTexture->Bind();
 	exitTexture->Bind();
-	voxelQuadFBO.LinkTexture(GL_COLOR_ATTACHMENT1, *colorAttenuationTexture, 0);
 
+	//AttenuationShader------------------------------------------------------------
 	//-----------------------------------------------------------------------------
-	//-----------------------------------------------------------------------------
-
-	Camera lightCamera = Camera(2048, 2048, position + (glm::vec3(light.position.x, light.position.y, light.position.z) - position) * 300.0f, position);
+	/*
 	voxelHalfAngleAttenuationShader->Activate();
+	Camera lightCamera = Camera(2048, 2048, position + (glm::vec3(light.position.x, light.position.y, light.position.z) - position) * 300.0f, position);
 	colorAttenuationTexture->Bind();
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
 	glEnable(GL_BLEND);
+	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_COLOR, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // Over operator
 
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
-	voxelHalfAngleColorShader->Activate();
 	this->exportData(voxelHalfAngleAttenuationShader);
-	lightCamera.exportData(*voxelHalfAngleAttenuationShader);
+	lightCamera.exportData(*voxelHalfAngleAttenuationShader, "lightCamera");
 	light.exportData(*voxelHalfAngleAttenuationShader, 0);
-
 	glUniform1f(glGetUniformLocation(voxelHalfAngleAttenuationShader->ID, "modelHalfwaySlicePlaneDelta"), modelDelta);
+	*/
 
 	unsigned int source;
 	unsigned int target;
@@ -444,11 +441,12 @@ void VoxelData::drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDept
 		target = (currentStep + 1) % 2;
 		glm::vec4 modelSlicePosition = modelVolumeCenterPosition - n * (currentStep - stepCount * 0.5f);
 		voxelHalfAngleColorShader->Activate();
-		opacityTextures[source]->Bind();
+		opacityTextures[0]->Bind();
 		voxelHalfAngleAttenuationShader->Activate();
-		.LinkTexture(GL_COLOR_ATTACHMENT0, opacityTextures[target], 0);
+		opacityTextures[0]->Bind();
+		opacityFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *opacityTextures[0], 0);
+		voxelHalfAngleColorShader->Activate();
 		drawProxyGeometry(camera, modelSlicePosition, modelSliceNormal);
-
 	}
 
 	voxelTexture->Unbind();

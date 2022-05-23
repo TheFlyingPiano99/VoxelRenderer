@@ -40,13 +40,13 @@ class VoxelData
 	Texture2D* exitTexture = nullptr;
 	FBO lightFBOs[MAX_LIGHT_COUNT];
 	Texture2D* lightTextures[MAX_LIGHT_COUNT] = {nullptr};
-	FBO colorAttenuationFBO;
 	Texture2D* opacityTextures[2] = {nullptr};
 	Texture2D* quadDepthTexture = nullptr;
-	Texture2D* colorAttenuationTexture = nullptr;
+	Texture2D* colorAttenuationTexture = nullptr;	// To transfer current slice data from color shader to attenuation shader
 
 	FBO voxelQuadFBO;
 	FBO lightQuadFBO;
+	FBO opacityFBO;
 
 	BoundingBox boundingBox;
 	BoundingGeometry boundingGeometry;

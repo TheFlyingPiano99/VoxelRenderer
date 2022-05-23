@@ -346,10 +346,13 @@
     <None Include="..\Resources\Shaders\voxelHalfAngleColor.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="..\Resources\Shaders\proxyGeometry.vert">
+    <None Include="..\Resources\Shaders\proxyGeometryViewCamera.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="..\Resources\Shaders\voxelHalfAngleAttenuation.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\Resources\Shaders\proxyGeometryLightCamera.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
   </ItemGroup>
