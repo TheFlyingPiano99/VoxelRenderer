@@ -155,6 +155,7 @@ struct FeatureGroup {
 
 class TransferFunction
 {
+private:
 	Shader* shader = nullptr;
 	glm::mat4 modelMatrix;
 	glm::mat4 invModelMatrix;

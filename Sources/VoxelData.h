@@ -38,9 +38,9 @@ class VoxelData
 	FBO enterFBO, exitFBO;
 	Texture2D* enterTexture = nullptr;
 	Texture2D* exitTexture = nullptr;
-	FBO lightFBOs[MAX_LIGHT_COUNT];
-	Texture2D* lightTextures[MAX_LIGHT_COUNT] = {nullptr};
-	Texture2D* opacityTextures[2] = {nullptr};
+	FBO lightFBO;
+	Texture2D* lightTexture = {nullptr};
+	Texture2D* opacityTextures[2] = {nullptr};	// Ping-pong texture pair
 	Texture2D* quadDepthTexture = nullptr;
 	Texture2D* colorAttenuationTexture = nullptr;	// To transfer current slice data from color shader to attenuation shader
 
@@ -92,7 +92,7 @@ class VoxelData
 	void exportData(Shader* shader);
 
 	bool readDimensions(const char* path, std::string& name, Dimensions& dimensions);
-	void initFBOs(unsigned int contextWidth, unsigned int contextHeight);
+	void initBuffers(unsigned int contextWidth, unsigned int contextHeight);
 
 	void updateMatrices();
 
@@ -111,6 +111,7 @@ class VoxelData
 
 public :
 	VoxelData(Shader* _shader, Shader* _voxelHalfAngleColor, Shader* _voxelHalfAngleAttenuation, Shader* quadShader, Shader* boundingShader, Shader* _flatColorBoundingShader, Shader* transferShader, VAO* quadVAO, const char* directory, unsigned int contextWidth, unsigned int contextHeight);
+	
 	~VoxelData();
 
 	void animate(float dt);
@@ -119,7 +120,7 @@ public :
 	void drawHalfAngleLayer(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox, unsigned int currentStep, unsigned int stepCount);
 	void drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDepthTeture, Light& light, SkyBox& skybox);
 	void drawQuad(FBO& fbo);
-	void drawBoundingGeometry(Camera& camera, std::vector<Light>& lights);
+	void drawBoundingGeometry(Camera& camera, Light& light);
 	void drawBoundingGeometryOnScreen(FBO& fbo, Camera& camera, float opacity);
 	void drawTransferFunction(FBO& fbo);
 	void resetOpacity();
@@ -167,7 +168,7 @@ public :
 	}
 
 	void onContextResize(int width, int height) {
-		initFBOs(width, height);
+		initBuffers(width, height);
 	}
 
 	float& getSTFradius() {

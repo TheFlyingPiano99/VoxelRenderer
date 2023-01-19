@@ -383,17 +383,20 @@ void Scene::draw()
 
 	if (cameraMoved || voxels->popChanged()) {
 		sliceToDraw = 0;
-		voxels->drawBoundingGeometry(*camera, lights);
+		voxels->drawBoundingGeometry(*camera, lights[0]);
 		voxels->resetOpacity();
 		reDraw = true;
 	}
-
-	skybox->draw(quadFBO, *camera);
+	
+	if (nullptr != skybox) {
+		skybox->draw(quadFBO, *camera);
+	}
 	for (auto obj : sceneObjects) {
 		obj->update();
 		obj->draw(quadFBO, *camera, lights);
 	}
 	/*
+	// Incremental slice draw
 	if (sliceToDraw >= 0) {
 		voxels->drawHalfAngleLayer(*camera, *quadDepthTexture, lights[0], *skybox, sliceToDraw, totalNumberOfSlices);
 		sliceToDraw++;

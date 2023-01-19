@@ -70,14 +70,12 @@ bool VoxelData::readDimensions(const char* path, std::string& name, Dimensions& 
 	return true;
 }
 
-void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
+void VoxelData::initBuffers(unsigned int contextWidth, unsigned int contextHeight)
 {
 	if (enterTexture != nullptr) {	// Not the first call
 		delete enterTexture;
 		delete exitTexture;
-		for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
-			delete lightTextures[i];
-		}
+		delete lightTexture;
 		delete opacityTextures[0];
 		delete opacityTextures[1];
 		delete quadTexture;
@@ -103,14 +101,12 @@ void VoxelData::initFBOs(unsigned int contextWidth, unsigned int contextHeight)
 
 	// SkyBox is at location 5.
 
-	// Lights:
-	for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
-		lightTextures[i] = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 7 + i, GL_RGBA, GL_UNSIGNED_BYTE);
-		lightFBOs[i].LinkTexture(GL_COLOR_ATTACHMENT0, *lightTextures[i], 0);
+	// Light:
+	lightTexture = new Texture2D(GL_RGBA16F, glm::vec2(contextWidth, contextHeight), 7, GL_RGBA, GL_UNSIGNED_BYTE);
+	lightFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *lightTexture, 0);
 
-		RBO lightRbo(GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
-		lightFBOs[i].LinkRBO(GL_DEPTH_ATTACHMENT, lightRbo);
-	}
+	RBO lightRbo(GL_DEPTH_COMPONENT24, contextWidth, contextHeight);
+	lightFBO.LinkRBO(GL_DEPTH_ATTACHMENT, lightRbo);
 
 	// Quad:
 	quadTexture = new Texture2D(GL_RGBA, glm::vec2(contextWidth, contextHeight), 0, GL_RGBA, GL_FLOAT);
@@ -163,7 +159,7 @@ VoxelData::VoxelData(Shader* _voxelShader, Shader* _voxelHalfAngleColor, Shader*
 	// Transfer function:
 	transferFunction.setCamSpacePosition(glm::vec2(0.0f, -0.8f));
 
-	initFBOs(contextWidth, contextHeight);
+	initBuffers(contextWidth, contextHeight);
 
 	updateMatrices();
 }
@@ -176,13 +172,12 @@ VoxelData::~VoxelData() {
 	if (exitTexture != nullptr) {
 		delete exitTexture;
 	}
-	for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
-		if (lightTextures[i] != nullptr) {
-			delete lightTextures[i];
-		}
+	if (nullptr != lightTexture) {
+		delete lightTexture;
 	}
 	enterFBO.Delete();
 	exitFBO.Delete();
+	lightFBO.Delete();
 	for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
 
 	}
@@ -202,16 +197,14 @@ void VoxelData::animate(float dt)
 void VoxelData::control(float dt, bool paused, float cameraLastActive) {
 }
 
-void VoxelData::drawBoundingGeometry(Camera& camera, std::vector<Light>& lights) {
-	for (int i = 0; i < lights.size(); i++) {
-		glm::vec3 lightPos(lights[i].position.x, lights[i].position.y, lights[i].position.z);
-		float w = lights[i].position.w;
-		glm::vec3 eye(lightPos + lightPos * (300.0f - 300.0f * w));
-		glm::mat4 view = glm::lookAt(eye, eye + glm::normalize(position - eye), up);
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 1000.0f);
-		lights[i].viewProjMatrix = projection * view;
-	}
-	boundingGeometry.draw(camera, lights, modelMatrix, invModelMatrix, enterFBO, exitFBO, lightFBOs);
+void VoxelData::drawBoundingGeometry(Camera& camera, Light& light) {
+	glm::vec3 lightPos(light.position.x, light.position.y, light.position.z);
+	float w = light.position.w;
+	glm::vec3 eye(lightPos + lightPos * (300.0f - 300.0f * w));
+	glm::mat4 view = glm::lookAt(eye, eye + glm::normalize(position - eye), up);
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 1000.0f);
+	light.viewProjMatrix = projection * view;
+	boundingGeometry.draw(camera, light, modelMatrix, invModelMatrix, enterFBO, exitFBO, lightFBO);
 }
 
 void VoxelData::resetOpacity()
@@ -278,7 +271,7 @@ void VoxelData::drawLayer(Camera& camera, Texture2D& targetDepthTeture, Light& l
 	exitTexture->Bind();
 	targetDepthTeture.Bind();
 	opacityTextures[source]->Bind();
-	lightTextures[0]->Bind();
+	lightTexture->Bind();
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	voxelTexture->Unbind();
@@ -396,10 +389,10 @@ void VoxelData::drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDept
 	float modelDelta = modelDiameter / (float)stepCount /** abs(glm::dot(worldHalfway, worldViewDir))*/;
 	glm::vec4 modelSliceNormal = glm::vec4(worldHalfway.x, worldHalfway.y, worldHalfway.z, 0.0) * modelMatrix;
 	modelSliceNormal = glm::normalize(glm::vec4(modelSliceNormal.x, modelSliceNormal.y, modelSliceNormal.z, 0.0f));
-	float dotNorm = glm::dot(glm::vec3(modelSliceNormal.x, modelSliceNormal.y, modelSliceNormal.z), worldHalfway);
-	if (0.0f > dotNorm) {
-		std::cout << "Negative dot!" << std::endl;
-	}
+	//float dotNorm = glm::dot(glm::vec3(modelSliceNormal.x, modelSliceNormal.y, modelSliceNormal.z), worldHalfway);
+	//if (0.0f > dotNorm) {
+	//		std::cout << "Negative dot!" << std::endl;
+	//}
 
 	glUniform1f(glGetUniformLocation(voxelHalfAngleColorShader->ID, "modelHalfwaySlicePlaneDelta"), modelDelta);
 	glUniform3f(glGetUniformLocation(voxelHalfAngleColorShader->ID, "modelHalfwaySlicePlane.normal"), modelSliceNormal.x, modelSliceNormal.y, modelSliceNormal.z);
@@ -434,17 +427,17 @@ void VoxelData::drawFullWithHalfAngleSlice(Camera& camera, Texture2D& targetDept
 	unsigned int target;
 	glm::vec4 modelVolumeCenterPosition = invModelMatrix * glm::vec4(position.x, position.y, position.z, 1.0f);
 	modelVolumeCenterPosition = modelVolumeCenterPosition / modelVolumeCenterPosition.w;
-	glm::vec4 n = modelSliceNormal * modelDelta;
-	for (int currentStep = 0; currentStep < stepCount; currentStep++)
+	glm::vec4 modelStepVec = modelSliceNormal * modelDelta;
+	for (int currentStepIdx = 0; currentStepIdx < stepCount; currentStepIdx++)
 	{
-		source = currentStep % 2;
-		target = (currentStep + 1) % 2;
-		glm::vec4 modelSlicePosition = modelVolumeCenterPosition - n * (currentStep - stepCount * 0.5f);
+		source = currentStepIdx % 2;
+		target = (currentStepIdx + 1) % 2;
+		glm::vec4 modelSlicePosition = modelVolumeCenterPosition - modelStepVec * (currentStepIdx - stepCount * 0.5f);
 		voxelHalfAngleColorShader->Activate();
-		opacityTextures[0]->Bind();
+		opacityTextures[source]->Bind();
 		voxelHalfAngleAttenuationShader->Activate();
-		opacityTextures[0]->Bind();
-		opacityFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *opacityTextures[0], 0);
+		opacityTextures[source]->Bind();
+		opacityFBO.LinkTexture(GL_COLOR_ATTACHMENT0, *opacityTextures[target], 0);
 		voxelHalfAngleColorShader->Activate();
 		drawProxyGeometry(camera, modelSlicePosition, modelSliceNormal);
 	}

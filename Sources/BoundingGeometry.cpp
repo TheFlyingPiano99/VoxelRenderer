@@ -282,7 +282,7 @@ void BoundingGeometry::updateGeometry(Texture3D& voxelTexture, TransferFunction&
 	std::cout << "Bounding geometry is ready." << std::endl;
 }
 
-void BoundingGeometry::draw(Camera& camera, std::vector<Light>& lights, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, FBO& enterFBO, FBO& exitFBO, FBO* lightFBOs)
+void BoundingGeometry::draw(Camera& camera, const Light& light, glm::mat4& modelMatrix, glm::mat4& invModelMatrix, FBO& enterFBO, FBO& exitFBO, FBO& lightFBO)
 {
 	modelPosShader->Activate();
 	VAO.Bind();
@@ -309,19 +309,17 @@ void BoundingGeometry::draw(Camera& camera, std::vector<Light>& lights, glm::mat
 	glDepthFunc(GL_LESS);
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 
-	for (int i = 0; i < lights.size(); i++) {
-		lightFBOs[i].Bind();
-		glm::vec4 modelSpaceLightPos = invModelMatrix * lights[i].position;
-		modelSpaceLightPos = modelSpaceLightPos / modelSpaceLightPos.w;
-		glClearColor(modelSpaceLightPos.x, modelSpaceLightPos.y, modelSpaceLightPos.z, 1.0);
-		glClearDepth(1);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glDisable(GL_CULL_FACE);
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
-		glUniformMatrix4fv(glGetUniformLocation(modelPosShader->ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(lights[i].viewProjMatrix));
-		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-	}
+	lightFBO.Bind();
+	glm::vec4 modelSpaceLightPos = invModelMatrix * light.position;
+	modelSpaceLightPos = modelSpaceLightPos / modelSpaceLightPos.w;
+	glClearColor(modelSpaceLightPos.x, modelSpaceLightPos.y, modelSpaceLightPos.z, 1.0);
+	glClearDepth(1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glUniformMatrix4fv(glGetUniformLocation(modelPosShader->ID, "camera.viewProjMatrix"), 1, GL_FALSE, glm::value_ptr(light.viewProjMatrix));
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 	FBO::BindDefault();
 }
 
